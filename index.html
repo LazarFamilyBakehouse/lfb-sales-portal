@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Leads Portal — Lazar Family Bakehouse</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f0f2f5; color: #1a1a2e; min-height: 100vh; }
+
+  /* ─── LOGIN SCREEN ─── */
+  .login-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #4a0e8f, #7b2ff7, #9b30ff);
+  }
+  .login-card {
+    background: #fff; border-radius: 20px; padding: 48px 40px;
+    width: 90%; max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    text-align: center;
+  }
+  .login-card h1 { font-size: 1.6rem; color: #1a1a2e; margin-bottom: 4px; }
+  .login-card .brand { font-size: .88rem; color: #888; margin-bottom: 32px; }
+  .login-card .form-group { margin-bottom: 18px; text-align: left; }
+  .login-card label { display: block; margin-bottom: 6px; font-weight: 600; font-size: .85rem; color: #555; }
+  .login-card input {
+    width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 10px;
+    font-size: .95rem; transition: .2s;
+  }
+  .login-card input:focus { outline: none; border-color: #6a0dad; box-shadow: 0 0 0 3px rgba(106,13,173,.15); }
+  .login-btn {
+    width: 100%; padding: 14px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #6a0dad, #9b30ff);
+    color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
+    transition: .2s; margin-top: 8px;
+  }
+  .login-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(106,13,173,.4); }
+  .login-btn:disabled { opacity: .6; cursor: default; transform: none; }
+  .login-error {
+    background: #fce4ec; color: #c62828; padding: 10px 14px; border-radius: 8px;
+    font-size: .85rem; margin-bottom: 16px; display: none;
+  }
+  .login-error.visible { display: block; }
+
+  /* ─── APP (hidden until login) ─── */
+  .app { display: none; }
+  .app.visible { display: block; }
+
+  /* ─── HEADER ─── */
+  .header {
+    background: linear-gradient(135deg, #6a0dad, #9b30ff);
+    color: #fff; padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(106,13,173,.35);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: .5px; }
+  .header .subtitle { font-size: .85rem; opacity: .85; margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .conn-status {
+    font-size: .75rem; padding: 4px 10px; border-radius: 12px;
+    font-weight: 600; display: flex; align-items: center; gap: 5px;
+  }
+  .conn-status.ok   { background: rgba(46,125,50,.3); color: #c8e6c9; }
+  .conn-status.err  { background: rgba(229,57,53,.3); color: #ffcdd2; }
+  .conn-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .conn-status.ok .conn-dot  { background: #66bb6a; }
+  .conn-status.err .conn-dot { background: #ef5350; }
+  .logout-btn {
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.4);
+    color: #fff; padding: 6px 14px; border-radius: 8px; font-size: .8rem;
+    font-weight: 600; cursor: pointer;
+  }
+  .logout-btn:hover { background: rgba(255,255,255,.25); }
+
+  /* ─── SEGMENT TABS ─── */
+  .segment-tabs {
+    display: flex; background: #fff; border-bottom: 2px solid #e0e0e0;
+    padding: 0 32px; gap: 0;
+  }
+  .seg-tab {
+    padding: 14px 24px; font-size: .92rem; font-weight: 600;
+    color: #777; cursor: pointer; border-bottom: 3px solid transparent;
+    transition: .2s; user-select: none; display: flex; align-items: center; gap: 8px;
+  }
+  .seg-tab:hover { color: #6a0dad; background: #f8f5ff; }
+  .seg-tab.active { color: #6a0dad; border-bottom-color: #6a0dad; }
+  .seg-tab .count {
+    background: #e8e8e8; color: #555; font-size: .75rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 12px; min-width: 24px; text-align: center;
+  }
+  .seg-tab.active .count { background: #ede0ff; color: #6a0dad; }
+  .seg-tab.active.tab-converted .count { background: #e8f5e9; color: #2e7d32; }
+  .seg-tab.active.tab-hot .count       { background: #fff3e0; color: #e65100; }
+  .seg-tab.active.tab-scouting .count  { background: #e3f2fd; color: #1565c0; }
+
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    padding: 14px 32px; background: #fafafa; border-bottom: 1px solid #e8e8e8;
+  }
+  .toolbar input[type="text"] {
+    flex: 1; min-width: 220px; padding: 10px 14px;
+    border: 1px solid #ccc; border-radius: 8px; font-size: .95rem;
+  }
+  .toolbar input[type="text"]:focus { outline: none; border-color: #6a0dad; box-shadow: 0 0 0 3px rgba(106,13,173,.12); }
+  .toolbar select {
+    padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; font-size: .95rem; background: #fff;
+  }
+  .btn {
+    padding: 10px 20px; border: none; border-radius: 8px; font-size: .9rem;
+    font-weight: 600; cursor: pointer; transition: .2s;
+  }
+  .btn-primary { background: #6a0dad; color: #fff; }
+  .btn-primary:hover { background: #7b1fa2; }
+  .btn-danger  { background: #e53935; color: #fff; }
+  .btn-danger:hover { background: #c62828; }
+  .btn-secondary { background: #e0e0e0; color: #333; }
+  .btn-secondary:hover { background: #bdbdbd; }
+  .btn-sm { padding: 6px 12px; font-size: .8rem; }
+  .toolbar-right { display: flex; gap: 10px; align-items: center; }
+  .toolbar-right label { font-size: .82rem; color: #777; font-weight: 600; }  td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-size: .92rem; }
+  tr:hover td { background: #f8f5ff; }
+
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+  .badge-converted { background: #e8f5e9; color: #2e7d32; }
+  .badge-hot { background: #fff3e0; color: #e65100; }
+  .badge-scouting { background: #e3f2fd; color: #1565c0; }
+  .actions-cell { display: flex; gap: 6px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; justify-content: center; align-items: center; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: #fff; border-radius: 16px; padding: 32px; width: 90%; max-width: 520px; box-shadow: 0 8px 32px rgba(0,0,0,.2); max-height: 90vh; overflow-y: auto; }
+  .modal h2 { margin-bottom: 20px; font-size: 1.3rem; color: #6a0dad; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: .88rem; color: #444; }
+  .form-group input, .form-group select { width: 100%; padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; font-size: .95rem; }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: #6a0dad; box-shadow: 0 0 0 3px rgba(106,13,173,.15); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+  .pagination { display: flex; justify-content: space-between; align-items: center; padding: 12px 32px 24px; flex-wrap: wrap; gap: 12px; }
+  .pagination .page-info { font-size: .85rem; color: #666; }
+  .page-controls { display: flex; gap: 4px; align-items: center; }
+  .page-controls button { padding: 7px 12px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; font-size: .85rem; min-width: 36px; }
+  .page-controls button.active { background: #6a0dad; color: #fff; border-color: #6a0dad; }
+  .page-controls button:hover:not(.active):not(:disabled) { background: #f0f0f0; }
+  .page-controls button:disabled { opacity: .4; cursor: default; }
+
+  .loading-bar { height: 3px; background: #6a0dad; position: fixed; top: 0; left: 0; z-index: 999; width: 0; transition: width .3s; }
+  .loading-bar.active { width: 60%; animation: pulse 1.5s infinite; }
+  .loading-bar.done { width: 100%; transition: width .2s; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 300; padding: 12px 20px; border-radius: 10px; color: #fff; font-size: .9rem; font-weight: 600; opacity: 0; transform: translateY(10px); transition: .3s; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: #2e7d32; }
+  .toast.error { background: #c62828; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 1.05rem; }
+
+  @media (max-width: 768px) {
+    .header { padding: 14px 16px; }
+    .segment-tabs { padding: 0 16px; overflow-x: auto; }
+    .seg-tab { padding: 12px 16px; font-size: .85rem; white-space: nowrap; }
+    .toolbar, .stats-bar, .table-wrap, .pagination { padding-left: 16px; padding-right: 16px; }
+    .stat-card { min-width: 120px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h1>Sales Leads Portal</h1>
+    <div class="brand">Lazar Family Bakehouse</div>
+    <div class="login-error" id="loginError"></div>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" required />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" required />
+      </div>
+      <button type="submit" class="login-btn" id="loginBtn">Sign In</button>
+    </form>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <div class="header">
+    <div>
+      <h1>Sales Leads Portal</h1>
+      <div class="subtitle">Lazar Family Bakehouse</div>
+    </div>
+    <div class="header-right">
+      <div class="conn-status ok" id="connStatus">
+        <div class="conn-dot"></div>
+        <span>Connected</span>
+      </div>
+      <button class="logout-btn" onclick="handleLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="segment-tabs" id="segmentTabs"></div>
+
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="Search by name, company, email, or phone..." onkeyup="handleSearch" />
+    <button class="btn btn-primary btn-sm" onclick="openAddLeadModal()">+ Add Lead</button>
+    <div class="toolbar-right">
+      <label>Per page:</label>
+      <select id="perPageSelect" onchange="handlePerPageChange">
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="all">All</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">📥 Export CSV</button>
+    </div>
+  </div>    .login-card { padding: 32px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-bar" id="loadingBar"></div>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h1>Sales Leads Portal</h1>
+    <div class="brand">Lazar Family Bakehouse</div>
+    <div class="login-error" id="loginError"></div>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="demo@example.com" required />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter password" required />
+      </div>
+      <button type="submit" class="login-btn" id="loginBtn">Sign In</button>
+    </form>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <div class="header">
+    <div>
+      <h1>Sales Leads Portal</h1>
+      <div class="subtitle">Lazar Family Bakehouse</div>
+    </div>
+    <div class="header-right">
+      <div class="conn-status ok" id="connStatus">
+        <div class="conn-dot"></div>
+        <span>Connected</span>
+      </div>
+      <button class="logout-btn" onclick="handleLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="segment-tabs" id="segmentTabs"></div>
+
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="Search by name, company, email, or phone..." onkeyup="handleSearch" />
+    <button class="btn btn-primary btn-sm" onclick="openAddLeadModal()">+ Add Lead</button>
+    <div class="toolbar-right">
+      <label>Per page:</label>
+      <select id="perPageSelect" onchange="handlePerPageChange">
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="all">All</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">📥 Export CSV</button>
+    </div>
+  </div>
+
+  <div class="stats-bar" id="statsBar"></div>
+
+  <div class="table-wrap">
+    <table id="leadsTable">
+      <thead>
+        <tr>
+          <th onclick="toggleSort('name')">Name <span class="sort-arrow"></span></th>
+          <th onclick="toggleSort('company')">Company <span class="sort-arrow"></span></th>
+          <th onclick="toggleSort('email')">Email <span class="sort-arrow"></span></th>
+          <th onclick="toggleSort('phone')">Phone <span class="sort-arrow"></span></th>
+          <th onclick="toggleSort('status')">Status <span class="sort-arrow"></span></th>
+          <th onclick="toggleSort('created_at')">Added <span class="sort-arrow"></span></th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="leadsBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="icon">📭</div>
+      <p>No leads found. <a href="#" onclick="openAddLeadModal(); return false;" style="color:#6a0dad; text-decoration:none; font-weight:600;">Add one now!</a></p>
+    </div>
+  </div>
+
+  <div id="pagination"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="event.target===this && closeModal()">
+  <div class="modal">
+    <h2 id="modalTitle">Add New Lead</h2>
+    <form id="leadForm">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="fName" required />
+      </div>
+      <div class="form-group">
+        <label>Company</label>
+        <input type="text" id="fCompany" />
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="fEmail" />
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input type="tel" id="fPhone" />
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="fStatus" required>
+          <option value="Scouting">Scouting</option>
+          <option value="Hot Lead">Hot Lead</option>
+          <option value="Converted">Converted</option>
+        </select>
+      </div>
+      <input type="hidden" id="editId" />
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Lead</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>  const SUPABASE_URL = 'https://isvxippcnfukakkcpgyg.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdnhpcHBjbmZ1a2Fra2NwZ3lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTExNjI2MDAsImV4cCI6MTczNjczODYwMH0.8rVnLQTrJjmtME7cVk41k56hYBJZBCUvqr8F5z2jX0A';
+  
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentUser = null;
+  let allLeads = [];
+  let filteredLeads = [];
+  let sortBy = null;
+  let sortDesc = false;
+  let currentPage = 1;
+  let perPage = 25;
+  let searchTerm = '';
+  let segmentFilter = null;
+
+  window.addEventListener('DOMContentLoaded', () => { initApp(); });
+
+  async function initApp() {
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) { currentUser = user; showApp(); await loadLeads(); subscribeToChanges(); } else { showLogin(); }
+    } catch (err) { console.error('Init error:', err); showLogin(); }
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    const btn = document.getElementById('loginBtn');
+    const errDiv = document.getElementById('loginError');
+    
+    try {
+      btn.disabled = true; btn.textContent = 'Signing in...';
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) { errDiv.textContent = error.message; errDiv.classList.add('visible'); return; }
+      currentUser = data.user; showApp(); await loadLeads(); subscribeToChanges();
+    } catch (err) { errDiv.textContent = 'Connection error'; errDiv.classList.add('visible'); } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+  }
+
+  async function handleLogout() { await sb.auth.signOut(); location.reload(); }
+
+  function showLogin() { document.getElementById('loginScreen').style.display = 'flex'; document.getElementById('app').classList.remove('visible'); }
+  function showApp() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('app').classList.add('visible'); }
+
+  function showLoading(show) { const bar = document.getElementById('loadingBar'); if (show) { bar.classList.add('active'); } else { bar.classList.remove('active'); bar.classList.add('done'); setTimeout(() => bar.classList.remove('done'), 200); } }
+
+  async function loadLeads() {
+    showLoading(true);
+    try {
+      const { data, error } = await sb.from('leads').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      allLeads = data || [];
+      applyFilters();
+    } catch (err) { toast('Failed to load leads', 'error'); console.error(err); } finally { showLoading(false); }
+  }
+
+  function subscribeToChanges() {
+    sb.channel('changes').on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => { loadLeads(); }).subscribe();
+  }
+
+  function applyFilters() {
+    filteredLeads = allLeads.filter(l => {
+      const searchMatch = !searchTerm || JSON.stringify(l).toLowerCase().includes(searchTerm.toLowerCase());
+      const segmentMatch = !segmentFilter || l.status === segmentFilter;
+      return searchMatch && segmentMatch;
+    });
+    if (sortBy) { filteredLeads.sort((a, b) => { const aVal = a[sortBy]; const bVal = b[sortBy]; const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0; return sortDesc ? -cmp : cmp; }); }
+    currentPage = 1;
+    renderSegmentTabs();
+    renderStats();
+    renderTable();
+    renderPagination();
+  }
+
+  function renderSegmentTabs() {
+    const container = document.getElementById('segmentTabs');
+    const counts = { 'Converted': 0, 'Hot Lead': 0, 'Scouting': 0 };
+    allLeads.forEach(l => { if (counts.hasOwnProperty(l.status)) counts[l.status]++; });
+    container.innerHTML = `
+      <div class="seg-tab ${!segmentFilter ? 'active' : ''}" onclick="setSegmentFilter(null)">All <span class="count">${allLeads.length}</span></div>
+      <div class="seg-tab tab-converted ${segmentFilter==='Converted' ? 'active' : ''}" onclick="setSegmentFilter('Converted')">Converted <span class="count">${counts.Converted}</span></div>
+      <div class="seg-tab tab-hot ${segmentFilter==='Hot Lead' ? 'active' : ''}" onclick="setSegmentFilter('Hot Lead')">Hot Lead <span class="count">${counts['Hot Lead']}</span></div>
+      <div class="seg-tab tab-scouting ${segmentFilter==='Scouting' ? 'active' : ''}" onclick="setSegmentFilter('Scouting')">Scouting <span class="count">${counts.Scouting}</span></div>
+    `;
+  }
+
+  function renderStats() {
+    const container = document.getElementById('statsBar');
+    const total = allLeads.length;
+    const converted = allLeads.filter(l => l.status === 'Converted').length;
+    const hotLeads = allLeads.filter(l => l.status === 'Hot Lead').length;
+    const scouting = allLeads.filter(l => l.status === 'Scouting').length;
+    container.innerHTML = `
+      <div class="stat-card total" onclick="setSegmentFilter(null)"><div class="label">Total</div><div class="value">${total}</div></div>
+      <div class="stat-card converted" onclick="setSegmentFilter('Converted')"><div class="label">Converted</div><div class="value">${converted}</div></div>
+      <div class="stat-card hot" onclick="setSegmentFilter('Hot Lead')"><div class="label">Hot Leads</div><div class="value">${hotLeads}</div></div>
+      <div class="stat-card scouting" onclick="setSegmentFilter('Scouting')"><div class="label">Scouting</div><div class="value">${scouting}</div></div>
+    `;
+  }  function renderTable() {
+    const container = document.getElementById('leadsBody');
+    const start = (currentPage - 1) * perPage;
+    const pageLeads = perPage === 'all' ? filteredLeads : filteredLeads.slice(start, start + perPage);
+    
+    if (pageLeads.length === 0) { document.getElementById('emptyState').style.display = 'block'; container.innerHTML = ''; return; }
+    document.getElementById('emptyState').style.display = 'none';
+    
+    container.innerHTML = pageLeads.map(lead => `
+      <tr>
+        <td>${lead.name || ''}</td>
+        <td>${lead.company || ''}</td>
+        <td>${lead.email || ''}</td>
+        <td>${lead.phone || ''}</td>
+        <td><span class="badge badge-${lead.status.toLowerCase().replace(' ', '-')}">${lead.status}</span></td>
+        <td>${new Date(lead.created_at).toLocaleDateString()}</td>
+        <td class="actions-cell">
+          <button class="btn btn-sm" onclick="openEditLeadModal(${lead.id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteLead(${lead.id})">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderPagination() {
+    if (perPage === 'all') { document.getElementById('pagination').innerHTML = ''; return; }
+    const container = document.getElementById('pagination');
+    const totalPages = Math.ceil(filteredLeads.length / perPage);
+    let html = `<div class="page-info">Page <strong>${currentPage}</strong> of <strong>${totalPages}</strong></div><div class="page-controls">`;
+    
+    if (currentPage > 1) html += `<button onclick="setPage(1)">First</button><button onclick="setPage(${currentPage - 1})">Prev</button>`;
+    for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+      html += `<button ${i === currentPage ? 'class="active"' : ''} onclick="setPage(${i})">${i}</button>`;
+    }
+    if (currentPage < totalPages) html += `<button onclick="setPage(${currentPage + 1})">Next</button><button onclick="setPage(${totalPages})">Last</button>`;
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  function toggleSort(field) {
+    if (sortBy === field) { sortDesc = !sortDesc; } else { sortBy = field; sortDesc = false; }
+    applyFilters();
+  }
+
+  function setSegmentFilter(status) {
+    segmentFilter = status;
+    applyFilters();
+  }
+
+  function handleSearch() {
+    searchTerm = document.getElementById('searchInput').value;
+    applyFilters();
+  }
+
+  function handlePerPageChange() {
+    const val = document.getElementById('perPageSelect').value;
+    perPage = val === 'all' ? 'all' : parseInt(val);
+    applyFilters();
+  }
+
+  function setPage(num) {
+    currentPage = num;
+    renderTable();
+    renderPagination();
+  }
+
+  function openAddLeadModal() {
+    document.getElementById('modalTitle').textContent = 'Add New Lead';
+    document.getElementById('leadForm').reset();
+    document.getElementById('editId').value = '';
+    document.getElementById('modalOverlay').classList.add('active');
+  }
+
+  async function openEditLeadModal(id) {
+    const lead = allLeads.find(l => l.id === id);
+    if (!lead) return;
+    document.getElementById('modalTitle').textContent = 'Edit Lead';
+    document.getElementById('fName').value = lead.name || '';
+    document.getElementById('fCompany').value = lead.company || '';
+    document.getElementById('fEmail').value = lead.email || '';
+    document.getElementById('fPhone').value = lead.phone || '';
+    document.getElementById('fStatus').value = lead.status || 'Scouting';
+    document.getElementById('editId').value = id;
+    document.getElementById('modalOverlay').classList.add('active');
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
+  }
+
+  document.getElementById('leadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editId').value;
+    const data = {
+      name: document.getElementById('fName').value,
+      company: document.getElementById('fCompany').value,
+      email: document.getElementById('fEmail').value,
+      phone: document.getElementById('fPhone').value,
+      status: document.getElementById('fStatus').value
+    };
+    
+    try {
+      if (id) { await sb.from('leads').update(data).eq('id', id); toast('Lead updated', 'success'); } else { await sb.from('leads').insert([data]); toast('Lead added', 'success'); }
+      closeModal();
+      await loadLeads();
+    } catch (err) { toast('Error saving lead', 'error'); console.error(err); }
+  });
+
+  async function deleteLead(id) {
+    if (!confirm('Delete this lead?')) return;
+    try { await sb.from('leads').delete().eq('id', id); toast('Lead deleted', 'success'); await loadLeads(); } catch (err) { toast('Error deleting lead', 'error'); }
+  }  function toast(msg, type) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast ' + type + ' show';
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  function exportCSV() {
+    const rows = [['Name', 'Company', 'Email', 'Phone', 'Status', 'Added']];
+    filteredLeads.forEach(lead => {
+      rows.push([
+        lead.name || '',
+        lead.company || '',
+        lead.email || '',
+        lead.phone || '',
+        lead.status || '',
+        new Date(lead.created_at).toLocaleDateString()
+      ]);
+    });
+    
+    let csv = rows.map(r => r.map(cell => '"' + (cell + '').replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'leads_' + new Date().toISOString().split('T')[0] + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
+
+  sb.auth.onAuthStateChanged((event, session) => {
+    if (event === 'SIGNED_OUT' || !session) { location.reload(); }
+  });
+
+  setInterval(async () => {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const status = document.getElementById('connStatus');
+      if (session) {
+        status.className = 'conn-status ok';
+        status.innerHTML = '<div class="conn-dot"></div><span>Connected</span>';
+      } else {
+        status.className = 'conn-status err';
+        status.innerHTML = '<div class="conn-dot"></div><span>Offline</span>';
+      }
+    } catch (err) {
+      const status = document.getElementById('connStatus');
+      status.className = 'conn-status err';
+      status.innerHTML = '<div class="conn-dot"></div><span>Offline</span>';
+    }
+  }, 10000);
+</script></body>
+</html>
