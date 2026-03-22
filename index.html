@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sales Leads Portal — Lazar Family Bakehouse</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="leads-data.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
@@ -176,7 +177,27 @@ function csv(){
 function toast(m,t){var e=document.getElementById('tt');e.textContent=m;e.className='toast '+t+' show';setTimeout(function(){e.className='toast'},2500)}
 function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
 db.channel('leads-live').on('postgres_changes',{event:'*',schema:'public',table:'leads'},function(){load()}).subscribe();
+
+// Auto-sync: check if SEED_DATA has contacts not yet in the database
+async function autoSync(){
+  if(typeof SEED_DATA==='undefined'||!SEED_DATA.length)return;
+  var{data:existing}=await db.from('leads').select('name,company');
+  if(!existing)existing=[];
+  var existingKeys=new Set(existing.map(function(l){return(l.name||'')+'|'+(l.company||'')}));
+  var missing=SEED_DATA.filter(function(l){return!existingKeys.has((l.name||'')+'|'+(l.company||''))});
+  if(missing.length>0){
+    // Insert in batches of 50
+    for(var i=0;i<missing.length;i+=50){
+      var batch=missing.slice(i,i+50);
+      await db.from('leads').insert(batch);
+    }
+    toast(missing.length+' new contacts synced','ok');
+    load();
+  }
+}
+
 load();
+autoSync();
 </script>
 </body>
 </html>
