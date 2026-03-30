@@ -73,6 +73,8 @@ tr:hover td{background:#f8f5ff}
 <div class="seg-tabs" id="tabs"></div>
 <div class="toolbar">
   <input type="text" id="q" placeholder="Search by name, company, email, phone, or status..." oninput="filt()">
+  <select id="catFil" onchange="filt()"><option value="all">All Categories</option><option value="coffee">Coffee Shops</option><option value="hotel">Hotels</option><option value="grocery">Grocery / Markets</option><option value="other">Other</option></select>
+  <select id="locFil" onchange="filt()"><option value="all">All Locations</option><option value="in">Colorado (In-State)</option><option value="out">Out of State</option></select>
   <label style="font-size:.82rem;color:#777;font-weight:600">Show:</label>
   <select id="pp" onchange="filt()"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option><option value="0">All</option></select>
   <button class="btn btn-s" onclick="csv()">Export CSV</button>
@@ -111,14 +113,37 @@ async function load(){
   if(error){toast('Failed to load','er');console.error(error);return}
   all=data||[];filt();
 }
+// Category detection from company field
+function getCat(c){
+  if(!c)return'other';
+  var lc=c.toLowerCase();
+  if(lc.includes('coffee')||lc.includes('cafe')||lc.includes('roaster')||lc.includes('tea'))return'coffee';
+  if(lc.includes('hotel')||lc.includes('resort')||lc.includes('inn')||lc.includes('lodge')||lc.includes('suites')||lc.includes('b&b')||lc.includes('bed &'))return'hotel';
+  if(lc.includes('grocer')||lc.includes('market')||lc.includes('deli')||lc.includes('provisions')||lc.includes('fruits'))return'grocery';
+  return'other';
+}
+// Colorado cities for in-state detection
+var coCities=['denver','boulder','colorado springs','fort collins','pueblo','aspen','vail','telluride','breckenridge','steamboat','durango','estes park','glenwood','crested butte','golden','longmont','loveland','arvada','lakewood','aurora','littleton','englewood','broomfield','thornton','westminster','granby','frisco','dillon','silverthorne','rino','lohi','lodo','capitol hill','cherry creek','highlands','wheat ridge','parker','castle rock','monument','manitou','salida','buena vista','leadville','winter park','keystone','beaver creek','snowmass','carbondale','basalt','dolores','ouray','pagosa','montrose','grand junction','delta','gunnison','alamosa','trinidad','walsenburg','sterling','greeley','windsor','firestone','frederick','erie','lafayette','louisville','superior','nederland','lyons','niwot','evergreen','conifer','bailey','fairplay','south park','idaho springs','georgetown','central city','black hawk','jefferson county','rico','cortez','farmington','silverton','ridgway','norwood','naturita','hotchkiss','paonia','silt','rifle','new castle','eagle','avon','minturn','copper','monarch','woodland park','divide','cripple creek','victor','florence','canon city','penrose','westcliffe','silver cliff','la veta','san luis','blanca','fort garland','del norte','south fork','creede','lake city','cimarron'];
+function isColorado(c){
+  if(!c)return true;
+  var lc=c.toLowerCase();
+  if(lc.includes('colorado')||lc.includes(' co'))return true;
+  for(var i=0;i<coCities.length;i++){if(lc.includes(coCities[i]))return true}
+  return false;
+}
 function filt(){
-  const q=document.getElementById('q').value.toLowerCase().trim();
-  fil=all.filter(l=>{
+  var q=document.getElementById('q').value.toLowerCase().trim();
+  var catF=document.getElementById('catFil').value;
+  var locF=document.getElementById('locFil').value;
+  fil=all.filter(function(l){
     if(seg!=='all'&&l.status!==seg)return false;
+    if(catF!=='all'&&getCat(l.company)!==catF)return false;
+    if(locF==='in'&&!isColorado(l.company))return false;
+    if(locF==='out'&&isColorado(l.company))return false;
     if(q&&!(l.name.toLowerCase().includes(q)||(l.company||'').toLowerCase().includes(q)||(l.email||'').toLowerCase().includes(q)||(l.phone||'').includes(q)||l.status.toLowerCase().includes(q)))return false;
     return true;
   });
-  fil.sort((a,b)=>{const va=(a[sc]||'').toLowerCase(),vb=(b[sc]||'').toLowerCase();return va<vb?(sa?-1:1):va>vb?(sa?1:-1):0});
+  fil.sort(function(a,b){var va=(a[sc]||'').toLowerCase(),vb=(b[sc]||'').toLowerCase();return va<vb?(sa?-1:1):va>vb?(sa?1:-1):0});
   cp=1;render();
 }
 function srt(c){if(sc===c)sa=!sa;else{sc=c;sa=true}filt()}
