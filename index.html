@@ -66,7 +66,7 @@ tbody tr.tap{cursor:pointer}
 .tbl{overflow-x:auto}
 .score{font-family:'Playfair Display',Georgia,serif;font-weight:700;font-size:1.05rem}
 .bar{height:8px;background:var(--tan);border-radius:4px;overflow:hidden;flex:1;min-width:50px}.bar>i{display:block;height:100%;background:var(--red)}
-.filters{display:grid;grid-template-columns:2fr repeat(5,1fr);gap:8px;margin-bottom:12px}
+.filters{display:grid;grid-template-columns:2fr repeat(6,1fr);gap:8px;margin-bottom:12px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{background:var(--white);border:1px solid var(--tan-dk);color:var(--brown);border-radius:18px;padding:8px 14px;font-family:inherit;font-size:.84rem;font-weight:600;cursor:pointer;min-height:40px}
 .chip.on{background:var(--red);border-color:var(--red);color:#fff}
@@ -294,9 +294,11 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
           <select id="ftier" onchange="renderLeads()"><option value="">All tiers</option><option value="1">Single location</option><option value="2">Tier 2 (multi-door)</option></select>
           <select id="ft" onchange="renderLeads()"><option value="">All types</option></select>
           <select id="fs" onchange="renderLeads()"><option value="">All stages</option><option>Not dropped</option><option>Planned</option><option>In sequence</option><option>Conversation</option><option>Converted</option><option>Passed</option></select>
+          <select id="fsort" onchange="renderLeads()"><option value="s">Strongest first</option><option value="w">Weakest first</option><option value="n">Name A to Z</option><option value="d">Latest drop first</option></select>
         </div>
         <div class="meta" id="leadcount" style="margin-bottom:8px"></div>
         <div class="tbl compact"><table><thead><tr><th>Account</th><th>Score</th><th>Type</th><th>Area</th><th>Size</th><th>Dropped</th><th>Stage</th><th>Next</th><th>Loaded from</th></tr></thead><tbody id="leadrows"></tbody></table></div>
+        <button class="btn btn-out2 btn-sm" id="lead-more" style="margin-top:8px" onclick="leadLimit+=200;renderLeads()">Show more</button>
         <div class="note">Tap a lead to change its stage, score, next step or address. Converted accounts stay here under the Converted stage.</div>
       </div>
     </section>
@@ -316,9 +318,12 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
           <div id="c-shop" style="margin-bottom:12px"></div>
           <div class="fg"><label>Who answered</label><div class="cchips chips2" data-c="reached"></div></div>
           <div class="fg" id="cg-outcome"><label>How it went</label><div class="cchips chips2" data-c="outcome"></div></div>
-          <div class="fgrid" id="cg-contact">
-            <div class="fg"><label>Their name</label><input id="c-name" placeholder="Dana" oninput="renderCallForm()"></div>
-            <div class="fg"><label>Their email</label><input id="c-email" type="email" placeholder="dana@shop.com" oninput="renderCallForm()"></div>
+          <div id="cg-contact">
+            <div class="fg"><label>Who you talked to</label><input id="c-name" placeholder="Dana, the manager" oninput="renderCallForm()"></div>
+            <div class="fgrid">
+              <div class="fg"><label>Who you're emailing</label><input id="c-to" placeholder="Blank if the same person" oninput="renderCallForm()"></div>
+              <div class="fg"><label>Their email</label><input id="c-email" type="email" placeholder="owner@shop.com" oninput="renderCallForm()"></div>
+            </div>
           </div>
           <div class="fg" id="cg-cb"><label>Call back in</label><div class="cchips chips2" data-c="cb"></div></div>
           <div class="fg"><label>Note (optional)</label><input id="c-note" placeholder="Buyer is in on Tuesdays." oninput="renderCallForm()"></div>
@@ -339,13 +344,15 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
       </div>
       <div class="panel">
         <div class="panel-title">Shops to call</div>
-        <div class="filters" style="grid-template-columns:2fr 1fr 1fr">
+        <div class="filters" style="grid-template-columns:2fr 1fr 1fr 1fr">
           <input placeholder="Search shop, town or phone" id="o-q" oninput="renderOOS()">
           <select id="o-metro" onchange="renderOOS()"><option value="">All metros</option></select>
           <select id="o-stage" onchange="renderOOS()"><option value="">All stages</option><option selected>To call</option><option>In sequence</option><option>Conversation</option><option>Converted</option><option>Passed</option></select>
+          <select id="o-sort" onchange="renderOOS()"><option value="s">Strongest first</option><option value="w">Weakest first</option><option value="n">Name A to Z</option></select>
         </div>
         <div class="meta" id="oos-count" style="margin-bottom:8px"></div>
         <div class="tbl compact"><table><thead><tr><th>Shop</th><th>Score</th><th>Metro</th><th>Phone</th><th>Type</th><th>Stage</th><th>Next</th><th>Log</th></tr></thead><tbody id="oosrows"></tbody></table></div>
+        <button class="btn btn-out2 btn-sm" id="oos-more" style="margin-top:8px" onclick="oosLimit+=150;renderOOS()">Show more</button>
         <div class="note">Score = store size x product fit. Tap a shop name for details, or tap the phone number to dial from your phone.</div>
       </div>
       <div class="panel">
@@ -371,7 +378,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
           
         </div>
         <div class="panel">
-          <div class="panel-title"><span id="rt-title">2. Today's route</span><a class="btn btn-red btn-sm" id="r-maps" target="_blank" rel="noopener">Open in Google Maps</a></div>
+          <div class="panel-title"><span id="rt-title">2. Today's route</span><span style="display:flex;gap:6px;align-items:center"><select id="mapsel" onchange="setMaps(this.value)" aria-label="Maps app" style="width:auto;padding:6px 8px;font-size:.78rem"><option value="apple">Apple Maps</option><option value="google">Google Maps</option></select><a class="btn btn-red btn-sm" id="r-maps" target="_blank" rel="noopener">Open route</a></span></div>
           <div id="stops"></div>
           <div class="note">Stops are in score order. "Dropped" opens Log a drop with the business filled in.</div>
         </div>
@@ -405,6 +412,12 @@ function fail(e,what){console.error(what,e);toast((what||'Something went wrong')
 function go(s){document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.s===s));document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active',x.id==='s-'+s));document.body.classList.toggle('dark',s==='oos');window.scrollTo(0,0)}
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>go(b.dataset.s));
 function lab(){document.querySelectorAll('.tbl table').forEach(t=>{const hd=[...t.querySelectorAll('th')].map(x=>x.textContent);t.querySelectorAll('tbody tr').forEach(r=>[...r.children].forEach((td,i)=>td.dataset.label=hd[i]||''))})}
+const isApple=/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+function mapPref(){let v=null;try{v=localStorage.getItem('lfbmaps')}catch(e){}return v||(isApple?'apple':'google')}
+function setMaps(v){try{localStorage.setItem('lfbmaps',v)}catch(e){}renderRoute(true)}
+function mapLink(q){return mapPref()==='apple'?'https://maps.apple.com/?q='+encodeURIComponent(q):'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q)}
+function dirLink(st){const e=st.map(encodeURIComponent);if(mapPref()==='apple')return e.length===1?'https://maps.apple.com/?dirflg=d&daddr='+e[0]:'https://maps.apple.com/directions?mode=driving&destination='+e[e.length-1]+e.slice(0,-1).map(x=>'&waypoint='+x).join('');return 'https://www.google.com/maps/dir/'+e.join('/')}
+let leadLimit=200,oosLimit=150;
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 
 /* ---------- LOGIN ---------- */
@@ -529,11 +542,12 @@ const CBD={'Tomorrow':1,'2 days':2,'1 week':7};
 let C={lead:null,reached:'Owner',outcome:'Wants a free fill',cb:'2 days'};
 const tel=p=>h(String(p).replace(/[^0-9+]/g,''));
 function renderCallChips(){document.querySelectorAll('.cchips').forEach(el=>{const g=el.dataset.c;el.innerHTML='';CCH[g].forEach(o=>{const b=document.createElement('button');b.type='button';b.textContent=o;b.className='chip'+(C[g]===o?' on':'');b.onclick=()=>{C[g]=o;renderCallForm()};el.appendChild(b)})})}
-function callEmail(){const nm=$('c-name').value.trim().split(' ')[0]||'there';const biz=C.lead?C.lead.n:'[Shop]';const ff=C.outcome==='Wants a free fill';
+function callWho(){const talked=$('c-name').value.trim(),to=$('c-to').value.trim();const same=!to||to.toLowerCase()===talked.toLowerCase();return{talked,to:same?talked:to,same}}
+function callEmail(){const w=callWho();const nm=w.to.split(/[ ,]/)[0]||'there';const tk=w.talked.split(/[ ,]/)[0];const biz=C.lead?C.lead.n:'[Shop]';const OPENER=w.same?'Thank you for taking my call today.':'I spoke with '+(tk||'your team')+' at '+biz+' today, who suggested I reach out to you.';const ff=C.outcome==='Wants a free fill';
  const STORY='We\'re a mother-son bakery in Colorado, and our mandel bread is a four-generation family recipe: a cousin of biscotti with a softer middle. Our 7.4 oz pouches are shelf-stable for 6 months and come in four flavors, including gluten-free.';
- const ASK=ff?'As we discussed, we\'d love to send a free case so you can see how it sells, with no commitment. Could you confirm the best shipping address and who it should go to?':'I\'d be glad to send wholesale pricing and a few samples. Would that be helpful?';
+ const ASK=ff?(w.same?'As we discussed, we':'We')+'\'d love to send a free case so you can see how it sells, with no commitment. Could you confirm the best shipping address and who it should go to?':'I\'d be glad to send wholesale pricing and a few samples. Would that be helpful?';
  const note=$('c-note-email').checked?$('c-note').value.trim():'';
- return{subject:ff?'A free case of mandel bread for '+biz:'Mandel bread for '+biz,body:['Hi '+nm+',','Thank you for taking my call today.',STORY,ASK].concat(note?[note]:[]).concat(['Best regards,\nJake Lazar\nLazar Family Bakehouse\n(303) 990-0779 | info@lazarfamilybakehouse.com']).join('\n\n')}}
+ return{subject:ff?'A free case of mandel bread for '+biz:'Mandel bread for '+biz,body:['Hi '+nm+',',OPENER,STORY,ASK].concat(note?[note]:[]).concat(['Best regards,\nJake Lazar\nLazar Family Bakehouse\n(303) 990-0779 | info@lazarfamilybakehouse.com']).join('\n\n')}}
 function cancelCall(){C.lead=null;renderCallForm();window.scrollTo(0,0)}
 function renderCallForm(){renderCallChips();$('callform').classList.toggle('nolead',!C.lead);const l=C.lead,nr=NOREACH.includes(C.reached),em=$('c-email').value.trim();
  $('c-shop').innerHTML=l?`<div class="serif" style="font-size:1.15rem;font-weight:700">${h(l.n)}</div><div class="meta">${h(l.metro||l.w)}${l.a?' · '+h(l.a):''} · score ${l.s}</div>${l.ph?`<a class="btn btn-red" style="margin-top:8px" href="tel:${tel(l.ph)}">Call ${h(l.ph)}</a>`:'<div class="meta">No phone number on file.</div>'}<div class="meta" style="margin-top:6px">${h(l.notes)}</div>`:'<div class="meta">Pick a shop from the list below, then log how the call went.</div>';
@@ -543,9 +557,9 @@ function renderCallForm(){renderCallChips();$('callform').classList.toggle('nole
  $('cg-mail').style.display=wantsMail?'':'none';$('cg-nomail').style.display=wantsMail?'none':'';
  if(wantsMail){const e=callEmail();$('c-subj').textContent=e.subject;$('c-body').textContent=e.body;$('c-mailnote').textContent=has?'This goes to your approval queue. Nothing sends until you approve it and Gmail is connected.':'Add their email to queue this. Without one, the call is still logged.'}
  $('c-err').textContent=''}
-function pickCall(i){C.lead=L[i];C.reached='Owner';C.outcome='Wants a free fill';['c-name','c-email','c-note'].forEach(x=>$(x).value='');const p=PEOPLE.find(p=>p.lead_id===L[i].id);if(p){$('c-name').value=p.name||'';$('c-email').value=p.email||''}go('oos');renderCallForm();$('callform').scrollIntoView({behavior:'smooth',block:'start'})}
+function pickCall(i){C.lead=L[i];C.reached='Owner';C.outcome='Wants a free fill';['c-name','c-to','c-email','c-note'].forEach(x=>$(x).value='');const p=PEOPLE.find(p=>p.lead_id===L[i].id);if(p){$('c-name').value=p.name||'';$('c-email').value=p.email||''}go('oos');renderCallForm();$('callform').scrollIntoView({behavior:'smooth',block:'start'})}
 async function saveCall(){const l=C.lead,err=$('c-err');if(!l){err.textContent='Pick a shop from the list first.';return}
- const nr=NOREACH.includes(C.reached),nm=$('c-name').value.trim(),em=$('c-email').value.trim(),note=$('c-note').value.trim();
+ const nr=NOREACH.includes(C.reached),w=callWho(),nm=w.talked,em=$('c-email').value.trim(),note=$('c-note').value.trim();
  if(!nr&&em&&!okMail(em)){err.textContent='That email does not look right.';return}
  const needCb=nr||C.outcome==='Call back later';const cb=new Date();cb.setDate(cb.getDate()+CBD[C.cb]);cb.setHours(10,0,0,0);const cbTxt=(cb.getMonth()+1)+'/'+cb.getDate();
  const ff=C.outcome==='Wants a free fill';const wantsMail=!nr&&['Wants a free fill','Interested, send info'].includes(C.outcome)&&okMail(em);
@@ -557,18 +571,18 @@ async function saveCall(){const l=C.lead,err=$('c-err');if(!l){err.textContent='
   up={stage:wantsMail?'In sequence':'Conversation',next_action:next,spoke_with:nm||l.sw,first_touch:l.dd||today()};if(ff)up.sequence='free_fill'}
  $('c-save').disabled=true;
  try{
-  if(!nr&&(nm||em)&&!PEOPLE.some(p=>p.lead_id===l.id&&(p.email||'').toLowerCase()===em.toLowerCase()&&(p.name||'').toLowerCase()===nm.toLowerCase())){const r=await sb.from('people').insert({lead_id:l.id,name:nm,email:em,title:C.reached,role:'to'});if(r.error)return fail(r.error,'Could not save the contact')}
+  if(!nr){const ppl=(w.same?[{name:nm,email:em,title:C.reached}]:[{name:nm,email:'',title:C.reached},{name:w.to,email:em,title:''}]).filter(x=>(x.name||x.email)&&!PEOPLE.some(p=>p.lead_id===l.id&&(p.email||'').toLowerCase()===x.email.toLowerCase()&&(p.name||'').toLowerCase()===x.name.toLowerCase())).map(x=>({lead_id:l.id,role:'to',...x}));if(ppl.length){const r=await sb.from('people').insert(ppl);if(r.error)return fail(r.error,'Could not save the contact')}}
   if(wantsMail){const e=callEmail();const r=await sb.from('emails').insert({lead_id:l.id,kind:ff?'free_fill':'manual',subject:e.subject,body:e.body,to_emails:[em],cc_emails:[SETTINGS.cc_victoria||'victoria@lazarfamilybakehouse.com'],status:'draft',send_at:new Date().toISOString()});if(r.error)return fail(r.error,'Could not draft the email')}
-  const r3=await sb.from('calls').insert({lead_id:l.id,result,reached:C.reached,contact_name:nr?'':nm,interest:nr?'':C.outcome,next_step:next,summary:note,callback_at:needCb?cb.toISOString():null});if(r3.error)return fail(r3.error,'Could not log the call');
+  const r3=await sb.from('calls').insert({lead_id:l.id,result,reached:C.reached,contact_name:nr?'':nm,interest:nr?'':C.outcome,next_step:next,summary:(note+(!nr&&!w.same&&w.to?' Emailing '+w.to+'.':'')).trim(),callback_at:needCb?cb.toISOString():null});if(r3.error)return fail(r3.error,'Could not log the call');
   const r4=await sb.from('leads').update(up).eq('id',l.id);if(r4.error)return fail(r4.error,'Could not update the lead');
  }finally{$('c-save').disabled=false}
- toast('Call logged for '+l.n+'.');C.lead=null;['c-name','c-email','c-note'].forEach(x=>$(x).value='');await loadAll()}
+ toast('Call logged for '+l.n+'.');C.lead=null;['c-name','c-to','c-email','c-note'].forEach(x=>$(x).value='');await loadAll()}
 const RLAB={spoke:'Spoke',transferred:'Spoke',got_email:'Got email',call_back:'Call back',voicemail:'Voicemail',no_answer:'No answer',not_interested:'Not interested'};
 function renderOOS(){const o=oos(),q=$('o-q').value.toLowerCase(),me=$('o-metro').value,st=$('o-stage').value;
  $('oos-total').textContent=o.length;$('oos-queue').textContent=o.filter(callable).length;$('oos-calls').textContent=callsThisWeek;$('oos-convo').textContent=o.filter(l=>['In sequence','Conversation'].includes(l.st)).length;
- const rows=o.filter(l=>(!q||(l.n+' '+l.w+' '+l.a+' '+l.ph).toLowerCase().includes(q))&&(!me||l.metro===me)&&(!st||(st==='To call'?callable(l):l.st===st))).sort((a,b)=>b.s-a.s);
- $('oos-count').textContent=rows.length+' of '+o.length+' shops'+(rows.length>150?' (showing the top 150 by score)':'');
- $('oosrows').innerHTML=rows.length?rows.slice(0,150).map(l=>{const i=L.indexOf(l);const s2=callable(l)?'To call':l.st;return `<tr><td class="hd"><b onclick="openLead(${i})" style="cursor:pointer">${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Multi</span>':''}</td><td><span class="score">${l.s}</span></td><td>${h(l.metro||l.w)}</td><td>${l.ph?`<a class="lnk" href="tel:${tel(l.ph)}">${h(l.ph)}</a>`:''}</td><td>${h(l.t)}</td><td><span class="badge ${s2==='To call'?'b-tan':SB[l.st]}">${h(s2)}</span></td><td>${h(l.nx)}</td><td class="acts"><button class="btn btn-red btn-sm" onclick="pickCall(${i})">Log call</button></td></tr>`}).join(''):'<tr><td class="hd" colspan="8">No shops match these filters.</td></tr>';
+ const rows=o.filter(l=>(!q||(l.n+' '+l.w+' '+l.a+' '+l.ph).toLowerCase().includes(q))&&(!me||l.metro===me)&&(!st||(st==='To call'?callable(l):l.st===st)));const so=$('o-sort').value;rows.sort(so==='w'?(a,b)=>a.s-b.s:so==='n'?(a,b)=>a.n.localeCompare(b.n):(a,b)=>b.s-a.s);
+ $('oos-count').textContent=rows.length+' of '+o.length+' shops'+(rows.length>oosLimit?' (showing '+oosLimit+')':'');$('oos-more').style.display=rows.length>oosLimit?'':'none';
+ $('oosrows').innerHTML=rows.length?rows.slice(0,oosLimit).map(l=>{const i=L.indexOf(l);const s2=callable(l)?'To call':l.st;return `<tr><td class="hd"><b onclick="openLead(${i})" style="cursor:pointer">${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Multi</span>':''}</td><td><span class="score">${l.s}</span></td><td>${h(l.metro||l.w)}</td><td>${l.ph?`<a class="lnk" href="tel:${tel(l.ph)}">${h(l.ph)}</a>`:''}</td><td>${h(l.t)}</td><td><span class="badge ${s2==='To call'?'b-tan':SB[l.st]}">${h(s2)}</span></td><td>${h(l.nx)}</td><td class="acts"><button class="btn btn-red btn-sm" onclick="pickCall(${i})">Log call</button></td></tr>`}).join(''):'<tr><td class="hd" colspan="8">No shops match these filters.</td></tr>';
  $('calllog').innerHTML=CALLS.length?CALLS.map(c=>`<tr><td class="hd"><b>${h(c.leads?c.leads.name:'')}</b></td><td>${h(fmtWhen(c.called_at))}</td><td>${h(c.reached||'')}${c.contact_name?' ('+h(c.contact_name)+')':''}</td><td>${h(c.interest||RLAB[c.result]||c.result)}</td><td>${h(c.next_step||'')}</td><td>${h(c.summary||'')}</td></tr>`).join(''):'<tr><td class="hd" colspan="6">No calls logged yet.</td></tr>';
  renderCallForm();lab()}
 
@@ -592,9 +606,9 @@ function renderStats(){const conv=L.filter(l=>l.st==='Converted').length,w=L.fil
  $('recent').innerHTML=L.filter(l=>l.dd).sort((a,b)=>b.dd.localeCompare(a.dd)).slice(0,5).map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Shipped':'Dropped'} ${fmt(l.dd)} · ${h(l.t)}</div></div><span class="badge ${SB[l.st]}">${l.st}</span></div>`).join('')||'<div class="meta">No drops logged yet.</div>';
  $('convos').innerHTML=L.filter(l=>l.st==='Conversation').map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${h(l.nx)}</div></div><span class="badge b-ok">Conversation</span></div>`).join('')||'<div class="meta">None right now.</div>'}
 function renderLeads(){const q=$('q').value.toLowerCase(),reg=$('freg').value,src=$('fsrc').value,tier=$('ftier').value,ft=$('ft').value,fs=$('fs').value;const CO=L.filter(l=>!isOut(l));
- const rows=CO.filter(l=>(!q||(l.n+' '+l.w+' '+l.a).toLowerCase().includes(q))&&(!reg||l.r===reg)&&(!src||l.src===src)&&(!tier||l.tier===+tier)&&(!ft||l.t===ft)&&(!fs||l.st===fs)).sort((a,b)=>b.s-a.s);
- $('leadcount').textContent=rows.length+' of '+CO.length+' Colorado leads'+(rows.length>300?' (showing the top 300, narrow with search or filters)':'');
- $('leadrows').innerHTML=rows.length?rows.slice(0,300).map(l=>`<tr class="tap" onclick="openLead(${L.indexOf(l)})"><td class="hd"><b>${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Tier 2</span>':''}</td><td><span class="score">${l.s}</span></td><td>${h(l.t)}</td><td>${h(l.w)}</td><td>${h(l.z)}</td><td>${fmt(l.dd)}</td><td><span class="badge ${SB[l.st]}">${l.st}</span></td><td>${h(l.nx)}</td><td>${h(l.src)}</td></tr>`).join(''):'<tr><td class="hd" colspan="9">No leads match these filters.</td></tr>';lab()}
+ const rows=CO.filter(l=>(!q||(l.n+' '+l.w+' '+l.a).toLowerCase().includes(q))&&(!reg||l.r===reg)&&(!src||l.src===src)&&(!tier||l.tier===+tier)&&(!ft||l.t===ft)&&(!fs||l.st===fs));const so=$('fsort').value;rows.sort(so==='w'?(a,b)=>a.s-b.s:so==='n'?(a,b)=>a.n.localeCompare(b.n):so==='d'?(a,b)=>(b.dd||'').localeCompare(a.dd||'')||b.s-a.s:(a,b)=>b.s-a.s);
+ $('leadcount').textContent=rows.length+' of '+CO.length+' Colorado leads'+(rows.length>leadLimit?' (showing '+leadLimit+')':'');$('lead-more').style.display=rows.length>leadLimit?'':'none';
+ $('leadrows').innerHTML=rows.length?rows.slice(0,leadLimit).map(l=>`<tr class="tap" onclick="openLead(${L.indexOf(l)})"><td class="hd"><b>${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Tier 2</span>':''}</td><td><span class="score">${l.s}</span></td><td>${h(l.t)}</td><td>${h(l.w)}</td><td>${h(l.z)}</td><td>${fmt(l.dd)}</td><td><span class="badge ${SB[l.st]}">${l.st}</span></td><td>${h(l.nx)}</td><td>${h(l.src)}</td></tr>`).join(''):'<tr><td class="hd" colspan="9">No leads match these filters.</td></tr>';lab()}
 async function upLead(i,up,msg){const l=L[i];const{error}=await sb.from('leads').update(up).eq('id',l.id);if(error)return fail(error,'Could not save');closeLead();toast(msg);await loadAll()}
 function convert(i){const inv=(prompt('First invoice number or amount (optional):')||'').trim();upLead(i,{stage:'Converted',converted_on:today(),first_invoice:inv,next_action:'Reorder nudge'},L[i].n+' marked converted.')}
 function unconvert(i){upLead(i,{stage:'In sequence',converted_on:null,next_action:'Resume follow-ups'},L[i].n+' moved back to active.')}
@@ -603,7 +617,7 @@ function openLead(i){const l=L[i],c=l.st==='Converted';const ppl=PEOPLE.filter(p
  $('lead').innerHTML=`<button class="x" onclick="closeLead()" aria-label="Close">&times;</button>
  <div class="serif" style="font-size:1.35rem;font-weight:700">${h(l.n)}</div>
  <div style="margin:8px 0 12px"><span class="badge ${SB[l.st]}">${l.st}</span> <span class="badge b-tan">Score ${l.s}</span>${l.tier===2?' <span class="badge b-tan">Tier 2</span>':''}</div>
- <div class="kv"><b>Type</b>${h(l.t)}<br><b>Size</b>${h(l.z)}<br><b>Address</b>${l.a?`<a class="lnk" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.n+' '+mapQ(l))}">${h(l.a)}</a>`:''}<br><b>Area</b>${h(l.w)}${l.metro?' · '+h(l.metro):''}${l.ph?`<br><b>Phone</b><a class="lnk" href="tel:${tel(l.ph)}">${h(l.ph)}</a>`:''}<br><b>Loaded from</b>${h(l.src)}
+ <div class="kv"><b>Type</b>${h(l.t)}<br><b>Size</b>${h(l.z)}<br><b>Address</b>${l.a?`<a class="lnk" target="_blank" rel="noopener" href="${mapLink(l.n+' '+mapQ(l))}">${h(l.a)}</a>`:''}<br><b>Area</b>${h(l.w)}${l.metro?' · '+h(l.metro):''}${l.ph?`<br><b>Phone</b><a class="lnk" href="tel:${tel(l.ph)}">${h(l.ph)}</a>`:''}<br><b>Loaded from</b>${h(l.src)}
  ${l.dd?`<br><b>${isOut(l)?'Shipped':'Dropped'}</b>${fmt(l.dd)}`:''}${l.sw?`<br><b>Spoke with</b>${h(l.sw)}`:''}${ppl.length?`<br><b>People</b>${ppl.map(p=>h(p.name)+(p.email?' &lt;'+h(p.email)+'&gt;':'')+(p.phone?' '+h(p.phone):'')).join('; ')}`:''}${c?`<br><b>Converted</b>${fmt(l.cv)}${l.inv?' · '+h(l.inv):''}`:''}</div>
  <div class="fgrid" style="margin-top:12px"><div class="fg"><label>Stage</label><select id="m-stage">${STAGES.map(s=>`<option${s===l.st?' selected':''}>${s}</option>`).join('')}</select></div><div class="fg"><label>Score</label><input id="m-score" type="number" min="0" max="100" value="${l.s}"></div></div>
  <div class="fg"><label>Next</label><input id="m-next" value="${h(l.nx)}"></div>
@@ -637,8 +651,8 @@ function renderRoute(keep){const c=cands(),n=+$('r-n').value;
  $('r-note').textContent=c.length<n?'Only '+c.length+' undropped in this area. Add more leads to fill a '+n+'-drop day.':picked.length+' of '+c.length+' selected.';
  const st=L.filter(l=>picked.includes(l.id)).sort((x,y)=>y.s-x.s);
  $('rt-title').textContent='2. Route: '+st.length+(st.length===1?' stop':' stops');
- $('stops').innerHTML=st.length?st.map((l,k)=>`<div class="stop"><span class="n">${k+1}</span><div style="flex:1;min-width:0"><b>${h(l.n)}</b><div class="meta">${h(l.a)}</div></div><button class="btn btn-out2 btn-sm" onclick="startDrop(${L.indexOf(l)})">Dropped</button></div>`).join(''):'<div class="meta">Select stops on the left.</div>';
- const m=$('r-maps');if(st.length){m.href='https://www.google.com/maps/dir/'+st.map(l=>encodeURIComponent(l.r==='DIA'?'Denver International Airport':l.n+', '+mapQ(l))).filter((v,i,a)=>a.indexOf(v)===i).join('/');m.style.display=''}else m.style.display='none'}
+ $('stops').innerHTML=st.length?st.map((l,k)=>`<div class="stop"><span class="n">${k+1}</span><div style="flex:1;min-width:0"><b>${h(l.n)}</b><div class="meta">${h(l.a)}</div></div><a class="btn btn-out2 btn-sm" target="_blank" rel="noopener" href="${dirLink([l.r==='DIA'?'Denver International Airport':l.n+', '+mapQ(l)])}">Go</a><button class="btn btn-out2 btn-sm" onclick="startDrop(${L.indexOf(l)})">Dropped</button></div>`).join(''):'<div class="meta">Select stops on the left.</div>';
+ const m=$('r-maps');$('mapsel').value=mapPref();if(st.length){m.href=dirLink(st.map(l=>l.r==='DIA'?'Denver International Airport':l.n+', '+mapQ(l)).filter((v,i,a)=>a.indexOf(v)===i));m.style.display=''}else m.style.display='none'}
 
 /* ---------- DOCS ---------- */
 function renderDocs(){$('doclist').innerHTML=D.length?D.map((d,i)=>`<div class="doc"><div class="ic">PDF</div><div class="main"><b>${h(d.name)}</b><div class="meta">${h(d.kind||'')}${d.best_for?' · '+h(d.best_for):''}</div></div><button class="btn btn-out2 btn-sm" onclick="openDoc(${i})">Open</button><button class="btn btn-out2 btn-sm" onclick="shareDoc(${i})">Share</button><button class="btn btn-out2 btn-sm" onclick="delDoc(${i})">Remove</button></div>`).join(''):'<div class="meta">No documents yet. Upload your PDFs here.</div>'}
