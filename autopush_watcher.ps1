@@ -1,44 +1,29 @@
-# LFB Sales Portal - Auto-Push Watcher
-# Watches for file changes and auto-pushes to GitHub
-# This runs in the background after SETUP_AUTOPUSH.bat installs it
+# LFB Leads Portal - Auto-Push Watcher
+# Checks this folder every 15 seconds. If any file changed, it commits and pushes to GitHub.
+# Installed by SETUP_AUTOPUSH.bat. Log: %TEMP%\lfb_autopush.log
 
-$repoPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $repoPath
+$repo = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $repo
+$log = Join-Path $env:TEMP "lfb_autopush.log"
+Add-Content $log ("{0} watcher started in {1}" -f (Get-Date -Format "MM/dd/yyyy HH:mm:ss"), $repo)
 
-$watcher = New-Object System.IO.FileSystemWatcher
-$watcher.Path = $repoPath
-$watcher.Filter = "*.*"
-$watcher.IncludeSubdirectories = $true
-$watcher.EnableRaisingEvents = $true
-$watcher.NotifyFilter = [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::FileName
-
-$debounce = $null
-
-$action = {
-    if ($debounce) { $debounce.Stop() }
-    $debounce = New-Object System.Timers.Timer
-    $debounce.Interval = 5000  # 5 second debounce
-    $debounce.AutoReset = $false
-    $debounce.add_Elapsed({
-        Set-Location $repoPath
-        git add -A
-        $status = git status --porcelain
+while ($true) {
+    try {
+        Set-Location $repo
+        $status = git status --porcelain 2>$null
         if ($status) {
-            $timestamp = Get-Date -Format "MM/dd/yyyy HH:mm:ss"
-            git commit -m "Sales portal update - $timestamp"
-            git push origin HEAD:main
+            $ts = Get-Date -Format "MM/dd/yyyy HH:mm:ss"
+            git add -A 2>&1 | Out-Null
+            git commit -m "Leads portal auto-update - $ts" 2>&1 | Out-Null
+            git push origin HEAD:main 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                git pull --rebase --autostash 2>&1 | Out-Null
+                git push origin HEAD:main 2>&1 | Out-Null
+            }
+            Add-Content $log ("{0} push finished, exit code {1}" -f $ts, $LASTEXITCODE)
         }
-    })
-    $debounce.Start()
+    } catch {
+        Add-Content $log ("{0} error: {1}" -f (Get-Date -Format "MM/dd/yyyy HH:mm:ss"), $_.Exception.Message)
+    }
+    Start-Sleep -Seconds 15
 }
-
-Register-ObjectEvent $watcher Changed -Action $action | Out-Null
-Register-ObjectEvent $watcher Created -Action $action | Out-Null
-Register-ObjectEvent $watcher Deleted -Action $action | Out-Null
-Register-ObjectEvent $watcher Renamed -Action $action | Out-Null
-
-Write-Host "LFB Sales Portal auto-push watcher started."
-Write-Host "Watching: $repoPath"
-Write-Host "Press Ctrl+C to stop."
-
-while ($true) { Start-Sleep -Seconds 1 }

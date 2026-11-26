@@ -1,39 +1,37 @@
 @echo off
 echo ============================================
-echo LFB Sales Portal - Setting up Auto-Push
-echo (Run this ONCE to install)
+echo   LFB Leads Portal - Setting up Auto-Push
+echo   (Run this ONCE. No administrator needed.)
 echo ============================================
 echo.
 
-set SCRIPT=%~dp0autopush_watcher.ps1
-set TASKNAME=LFB_Sales_AutoPush
+set "SCRIPT=%~dp0autopush_watcher.ps1"
+set "STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
+set "LAUNCHER=%STARTUP%\LFB_Sales_AutoPush.vbs"
 
-echo Registering background task...
+echo Installing the startup launcher...
+> "%LAUNCHER%" echo CreateObject("WScript.Shell").Run "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""%SCRIPT%""", 0, False
 
-schtasks /delete /tn "%TASKNAME%" /f >nul 2>&1
-
-schtasks /create /tn "%TASKNAME%" ^
- /tr "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "%SCRIPT%"" ^
- /sc onlogon ^
- /rl highest ^
- /f
-
-if %errorlevel% equ 0 (
+if not exist "%LAUNCHER%" (
     echo.
-    echo ============================================
-    echo SUCCESS! Auto-push is installed.
-    echo.
-    echo It will run automatically every time
-    echo you log in to Windows.
-    echo.
-    echo Starting it now for this session...
-    echo ============================================
-    powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "%SCRIPT%"
-) else (
-    echo.
-    echo ERROR: Setup failed. Try running as Administrator.
-    echo Right-click SETUP_AUTOPUSH.bat and choose
-    echo "Run as administrator"
+    echo ERROR: Could not create the launcher in your Startup folder.
+    pause
+    exit /b 1
 )
 
+echo Starting the watcher now...
+wscript "%LAUNCHER%"
+
+echo.
+echo ============================================
+echo   DONE. Auto-push is on.
+echo   It starts by itself each time you sign in
+echo   to Windows and publishes any change in
+echo   this folder within about 15 seconds.
+echo.
+echo   To turn it off: delete
+echo   LFB_Sales_AutoPush.vbs from your Startup
+echo   folder, then restart the computer.
+echo ============================================
+echo.
 pause

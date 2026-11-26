@@ -131,6 +131,40 @@ body.dark thead{background:#000;color:#f6ecdf}
 body.dark .btn-dark{background:#f6ecdf;color:#15100b}
 body.dark .toast{background:#f6ecdf;color:#15100b}
 body.dark .stat{border-top-color:var(--red)}
+details.more{margin:4px 0 10px}
+details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--brown);padding:8px 0;list-style-position:inside}
+.tblk{overflow-x:auto}
+@media(max-width:760px){
+  .portal-banner{display:none}
+  header{padding:6px 12px}.hdr-logo{height:28px}
+  .btn-out{padding:6px 10px;font-size:.72rem}
+  main{padding:8px 8px 84px}
+  .page-h{font-size:1.1rem;margin-bottom:8px}.page-sub{display:none}
+  .stats{gap:6px;margin-bottom:8px}.stat{padding:7px 10px}.sv{font-size:1.2rem;margin-top:0}.sh{display:none}.sl{font-size:.6rem}
+  .panel{padding:10px 10px;margin-bottom:8px}
+  .panel-title{font-size:.95rem;margin-bottom:8px;padding-bottom:6px}
+  .fg{margin-bottom:8px;gap:3px}.fg label,.lbl{font-size:.66rem}
+  input,select,textarea{padding:8px 10px;font-size:16px}
+  .chips,.chips2{gap:5px}.chip{padding:5px 11px;min-height:34px;font-size:.8rem}
+  .note{display:none}
+  nav.tabs button{min-height:50px;font-size:.68rem}
+  .filters{gap:6px;margin-bottom:8px}
+  #s-drop .btnrow,#callform .btnrow{position:sticky;bottom:54px;background:var(--cream);padding:8px 0 4px;margin-top:6px;z-index:5;border-top:1px solid var(--tan)}
+  .btnrow .btn{flex:1 1 30%;padding:8px 6px;font-size:.78rem}
+  #callform.nolead{display:none}
+  #queue .preview{max-height:110px;overflow:auto}
+  .tblk table{font-size:.74rem}.tblk th{font-size:.58rem;padding:6px 5px;white-space:normal}.tblk td{padding:6px 5px}
+  .tblk th:nth-child(5),.tblk td:nth-child(5){display:none}
+  .tbl.compact tr{display:flex;flex-wrap:wrap;align-items:center;gap:3px 10px;padding:7px 10px;margin-bottom:5px}
+  .tbl.compact td{width:auto;padding:0;font-size:.78rem;display:inline-flex;text-align:left}
+  .tbl.compact td::before{display:none}
+  .tbl.compact td.hd{flex:1 1 100%;font-size:.94rem}
+  .tbl.compact td.acts{margin-left:auto}
+  .tbl.compact .score{font-size:.9rem}
+  #leadrows td:nth-child(5),#leadrows td:nth-child(6),#leadrows td:nth-child(9),#oosrows td:nth-child(5){display:none}
+  #s-drop .fgrid,#cg-contact{grid-template-columns:1fr 1fr;gap:0 8px}
+  .row{padding:8px 2px}.cand,.doc,.stop{padding:7px 0}
+}
 </style>
 </head>
 <body>
@@ -213,15 +247,15 @@ body.dark .stat{border-top-color:var(--red)}
           <div class="fg"><label>Who or how</label><div class="chips" data-g="who" data-one="1"></div></div>
           <div class="fg" id="fg-leftwith" style="display:none"><label>Left with (optional)</label><input id="f-leftwith" placeholder="Oliver at the front desk" oninput="buildEmail()"></div>
           <div class="fg"><label>Location type</label><div class="chips" data-g="type" data-one="1"></div></div>
-          <div class="fg"><label>Size</label><div class="chips" data-g="tier" data-one="1"></div></div>
-          <div class="fg"><label>Left behind</label><div class="chips" data-g="left"></div></div>
+          
+          
           <div class="fg" id="fg-liked"><label>They liked</label><div class="chips" data-g="liked"></div></div>
           <div class="fg"><label>Next step to offer</label><div class="chips" data-g="next" data-one="1"></div></div>
-          <div class="fg"><label>Attach documents</label><div class="chips" data-g="att"></div></div>
-          <div class="fgrid">
+          
+          <details class="more"><summary>More options: size, left behind, attachments, time, personal line</summary><div class="fg"><label>Size</label><div class="chips" data-g="tier" data-one="1"></div></div><div class="fg"><label>Left behind</label><div class="chips" data-g="left"></div></div><div class="fg"><label>Attach documents</label><div class="chips" data-g="att"></div></div><div class="fgrid">
             <div class="fg"><label>Dropped at</label><input id="droptime" type="time" value="14:10" onchange="buildEmail()"></div>
             <div class="fg"><label>Personal line (optional)</label><input id="f-note" placeholder="Congrats on the lobby remodel." oninput="buildEmail()"></div>
-          </div>
+          </div></details>
         </div>
         <div>
           <div class="panel">
@@ -234,7 +268,7 @@ body.dark .stat{border-top-color:var(--red)}
             <div class="meta" id="em-to"></div>
             <div class="meta" id="em-cc"></div>
             <div class="meta"><b>Subject:</b> <span id="em-subj"></span></div>
-            <div class="preview" id="intro"></div>
+            <details class="more pv"><summary>Preview email</summary><div class="preview" id="intro"></div></details>
             <div class="meta" id="em-att" style="margin-top:6px"></div>
             <div class="when" id="sendwhen"></div>
             <div id="em-err" style="color:var(--urgent);font-size:.84rem;margin-top:6px"></div>
@@ -262,7 +296,7 @@ body.dark .stat{border-top-color:var(--red)}
           <select id="fs" onchange="renderLeads()"><option value="">All stages</option><option>Not dropped</option><option>Planned</option><option>In sequence</option><option>Conversation</option><option>Converted</option><option>Passed</option></select>
         </div>
         <div class="meta" id="leadcount" style="margin-bottom:8px"></div>
-        <div class="tbl"><table><thead><tr><th>Account</th><th>Score</th><th>Type</th><th>Area</th><th>Size</th><th>Dropped</th><th>Stage</th><th>Next</th><th>Loaded from</th></tr></thead><tbody id="leadrows"></tbody></table></div>
+        <div class="tbl compact"><table><thead><tr><th>Account</th><th>Score</th><th>Type</th><th>Area</th><th>Size</th><th>Dropped</th><th>Stage</th><th>Next</th><th>Loaded from</th></tr></thead><tbody id="leadrows"></tbody></table></div>
         <div class="note">Tap a lead to change its stage, score, next step or address. Converted accounts stay here under the Converted stage.</div>
       </div>
     </section>
@@ -293,13 +327,13 @@ body.dark .stat{border-top-color:var(--red)}
           <div class="panel-title">2. Follow-up</div>
           <div id="cg-mail">
             <div class="meta"><b>Subject:</b> <span id="c-subj"></span></div>
-            <div class="preview" id="c-body"></div>
+            <details class="more pv"><summary>Preview email</summary><div class="preview" id="c-body"></div></details>
             <label style="display:flex;gap:8px;align-items:center;font-size:.88rem;margin-top:8px"><input type="checkbox" id="c-note-email" onchange="renderCallForm()"> Add my note to the email</label>
             <div class="when" id="c-mailnote"></div>
           </div>
           <div id="cg-nomail" class="meta">No email for this outcome. The call is logged and the shop's next step is updated.</div>
           <div id="c-err" style="color:var(--urgent);font-size:.84rem;margin-top:6px"></div>
-          <div class="btnrow" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn btn-red" id="c-save" onclick="saveCall()">Save call</button></div>
+          <div class="btnrow" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn btn-red" id="c-save" onclick="saveCall()">Save call</button><button class="btn btn-out2" onclick="cancelCall()">Cancel</button></div>
           <div class="note">No answer or voicemail keeps the shop in the queue with a call-back date. Not interested moves it to Passed.</div>
         </div>
       </div>
@@ -311,12 +345,12 @@ body.dark .stat{border-top-color:var(--red)}
           <select id="o-stage" onchange="renderOOS()"><option value="">All stages</option><option selected>To call</option><option>In sequence</option><option>Conversation</option><option>Converted</option><option>Passed</option></select>
         </div>
         <div class="meta" id="oos-count" style="margin-bottom:8px"></div>
-        <div class="tbl"><table><thead><tr><th>Shop</th><th>Score</th><th>Metro</th><th>Phone</th><th>Type</th><th>Stage</th><th>Next</th><th>Log</th></tr></thead><tbody id="oosrows"></tbody></table></div>
+        <div class="tbl compact"><table><thead><tr><th>Shop</th><th>Score</th><th>Metro</th><th>Phone</th><th>Type</th><th>Stage</th><th>Next</th><th>Log</th></tr></thead><tbody id="oosrows"></tbody></table></div>
         <div class="note">Score = store size x product fit. Tap a shop name for details, or tap the phone number to dial from your phone.</div>
       </div>
       <div class="panel">
         <div class="panel-title">Call log</div>
-        <div class="tbl"><table><thead><tr><th>Shop</th><th>When</th><th>Reached</th><th>Outcome</th><th>Next step</th><th>Note</th></tr></thead><tbody id="calllog"></tbody></table></div>
+        <div class="tbl compact"><table><thead><tr><th>Shop</th><th>When</th><th>Reached</th><th>Outcome</th><th>Next step</th><th>Note</th></tr></thead><tbody id="calllog"></tbody></table></div>
         <div class="note">The latest 100 calls.</div>
       </div>
     </section>
@@ -500,7 +534,8 @@ function callEmail(){const nm=$('c-name').value.trim().split(' ')[0]||'there';co
  const ASK=ff?'As we discussed, we\'d love to send a free case so you can see how it sells, with no commitment. Could you confirm the best shipping address and who it should go to?':'I\'d be glad to send wholesale pricing and a few samples. Would that be helpful?';
  const note=$('c-note-email').checked?$('c-note').value.trim():'';
  return{subject:ff?'A free case of mandel bread for '+biz:'Mandel bread for '+biz,body:['Hi '+nm+',','Thank you for taking my call today.',STORY,ASK].concat(note?[note]:[]).concat(['Best regards,\nJake Lazar\nLazar Family Bakehouse\n(303) 990-0779 | info@lazarfamilybakehouse.com']).join('\n\n')}}
-function renderCallForm(){renderCallChips();const l=C.lead,nr=NOREACH.includes(C.reached),em=$('c-email').value.trim();
+function cancelCall(){C.lead=null;renderCallForm();window.scrollTo(0,0)}
+function renderCallForm(){renderCallChips();$('callform').classList.toggle('nolead',!C.lead);const l=C.lead,nr=NOREACH.includes(C.reached),em=$('c-email').value.trim();
  $('c-shop').innerHTML=l?`<div class="serif" style="font-size:1.15rem;font-weight:700">${h(l.n)}</div><div class="meta">${h(l.metro||l.w)}${l.a?' · '+h(l.a):''} · score ${l.s}</div>${l.ph?`<a class="btn btn-red" style="margin-top:8px" href="tel:${tel(l.ph)}">Call ${h(l.ph)}</a>`:'<div class="meta">No phone number on file.</div>'}<div class="meta" style="margin-top:6px">${h(l.notes)}</div>`:'<div class="meta">Pick a shop from the list below, then log how the call went.</div>';
  $('cg-outcome').style.display=nr?'none':'';$('cg-contact').style.display=nr?'none':'';
  $('cg-cb').style.display=(nr||C.outcome==='Call back later')?'':'none';
@@ -553,7 +588,7 @@ function renderStats(){const conv=L.filter(l=>l.st==='Converted').length,w=L.fil
  const ty={Hotel:{w:0,c:0,p:0},Coffee:{w:0,c:0,p:0},'Specialty retail':{w:0,c:0,p:0},Airport:{w:0,c:0,p:0},Other:{w:0,c:0,p:0}};L.forEach(l=>{const k=cat(l);if(!k)return;const v=ty[k];if(worked(l))v.w++;else v.p++;if(l.st==='Converted')v.c++});
  const rate=v=>v.w?v.c/v.w:-1;
  const rows=Object.entries(ty).sort((a,b)=>(rate(b[1])-rate(a[1]))||(b[1].w-a[1].w));
- $('convsplit').innerHTML='<div class="tbl"><table><thead><tr><th>Type</th><th>Dropped or shipped</th><th>Converted</th><th>Rate</th><th>Not yet dropped</th></tr></thead><tbody>'+rows.map(([k,v])=>{const r=v.w?Math.round(v.c/v.w*100):0;return `<tr><td class="hd"><b>${k}</b></td><td>${v.w}</td><td>${v.c}</td><td>${v.w?`<span style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end"><span class="bar"><i style="width:${r}%"></i></span><b>${r}%</b></span>`:'<span class="meta">No drops yet</span>'}</td><td>${v.p}</td></tr>`}).join('')+'</tbody></table></div>';
+ $('convsplit').innerHTML='<div class="tblk"><table><thead><tr><th>Type</th><th>Dropped or shipped</th><th>Converted</th><th>Rate</th><th>Not yet dropped</th></tr></thead><tbody>'+rows.map(([k,v])=>{const r=v.w?Math.round(v.c/v.w*100):0;return `<tr><td class="hd"><b>${k}</b></td><td>${v.w}</td><td>${v.c}</td><td>${v.w?`<span style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end"><span class="bar"><i style="width:${r}%"></i></span><b>${r}%</b></span>`:'<span class="meta">No drops yet</span>'}</td><td>${v.p}</td></tr>`}).join('')+'</tbody></table></div>';
  $('recent').innerHTML=L.filter(l=>l.dd).sort((a,b)=>b.dd.localeCompare(a.dd)).slice(0,5).map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Shipped':'Dropped'} ${fmt(l.dd)} · ${h(l.t)}</div></div><span class="badge ${SB[l.st]}">${l.st}</span></div>`).join('')||'<div class="meta">No drops logged yet.</div>';
  $('convos').innerHTML=L.filter(l=>l.st==='Conversation').map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${h(l.nx)}</div></div><span class="badge b-ok">Conversation</span></div>`).join('')||'<div class="meta">None right now.</div>'}
 function renderLeads(){const q=$('q').value.toLowerCase(),reg=$('freg').value,src=$('fsrc').value,tier=$('ftier').value,ft=$('ft').value,fs=$('fs').value;const CO=L.filter(l=>!isOut(l));
@@ -581,7 +616,7 @@ function startDrop(i){const l=L[i];closeLead();resetForm();$('f-biz').value=l.n;
 function newLead(){$('lead').innerHTML=`<button class="x" onclick="closeLead()" aria-label="Close">&times;</button>
  <div class="serif" style="font-size:1.35rem;font-weight:700">Add a lead</div>
  <div class="fg" style="margin-top:12px"><label>Business</label><input id="n-name"></div>
- <div class="fgrid"><div class="fg"><label>Type</label><select id="n-type">${['Hotel','Hotel group','Coffee shop','Coffee group','Specialty shop','Grocery','Gift shop','Airport retail','Resort','Distributor','Other'].map(x=>'<option>'+x+'</option>').join('')}</select></div><div class="fg"><label>Track</label><select id="n-trk"><option value="colorado">Colorado</option><option value="out_of_state">Out of state</option></select></div></div>
+ <div class="fgrid"><div class="fg"><label>Type</label><select id="n-type">${['Hotel','Hotel group','Coffee shop','Coffee group','Specialty shop','Grocery','Gift shop','Airport retail','Venue','Resort','Distributor','Other'].map(x=>'<option>'+x+'</option>').join('')}</select></div><div class="fg"><label>Track</label><select id="n-trk"><option value="colorado">Colorado</option><option value="out_of_state">Out of state</option></select></div></div>
  <div class="fgrid"><div class="fg"><label>Town or neighborhood</label><input id="n-area"></div><div class="fg"><label>Region (for routes)</label><input id="n-region" list="regions" placeholder="Denver Metro"><datalist id="regions">${[...new Set(L.map(l=>l.r).filter(Boolean))].map(x=>'<option value="'+h(x)+'">').join('')}</datalist></div></div>
  <div class="fg"><label>Address</label><input id="n-addr"></div>
  <div class="fgrid"><div class="fg"><label>Size (rooms, doors)</label><input id="n-size"></div><div class="fg"><label>Score (0 to 100)</label><input id="n-score" type="number" min="0" max="100" value="50"></div></div>
@@ -617,7 +652,7 @@ async function docIn(inp){const f=[...inp.files].filter(x=>/\.pdf$/i.test(x.name
  inp.value='';await loadAll()}
 
 function renderAll(){renderStats();renderLeads();pickTop();lab()}
-(async function init(){initForm();renderPeople();renderChips();buildEmail();
+(async function init(){if(innerWidth>760)document.querySelectorAll('details.pv').forEach(d=>d.open=true);initForm();renderPeople();renderChips();buildEmail();
  if(/type=recovery/.test(location.hash))return;
  const{data}=await sb.auth.getSession();if(data.session&&data.session.user&&(data.session.user.email||'').toLowerCase()===ADMIN)await enter()})();
 
