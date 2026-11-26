@@ -158,7 +158,7 @@ body.dark .stat{border-top-color:var(--red)}
   <nav class="tabs" id="tabs">
     <button data-s="home" class="active">Home</button>
     <button data-s="drop">Drop</button>
-    <button data-s="leads">Leads</button>
+    <button data-s="leads">CO Leads</button>
     <button data-s="oos">Out of state</button>
     <button data-s="routes">Routes</button>
     <button data-s="docs">Docs</button>
@@ -249,7 +249,7 @@ body.dark .stat{border-top-color:var(--red)}
     </section>
 
     <section class="section" id="s-leads">
-      <div class="page-h">Leads</div>
+      <div class="page-h">CO Leads</div>
       <div class="page-sub">Colorado leads, biggest and most important first</div>
       <div style="margin-bottom:12px"><button class="btn btn-dark btn-sm" onclick="newLead()">+ Add lead</button></div>
       <div class="panel">
@@ -274,7 +274,7 @@ body.dark .stat{border-top-color:var(--red)}
         <div class="stat"><div class="sl">Out-of-state shops</div><div class="sv" id="oos-total"></div><div class="sh">Mostly from the Google Maps search</div></div>
         <div class="stat"><div class="sl">Still to call</div><div class="sv" id="oos-queue"></div><div class="sh">Not reached yet</div></div>
         <div class="stat"><div class="sl">Calls this week</div><div class="sv" id="oos-calls"></div><div class="sh">Logged below</div></div>
-        <div class="stat"><div class="sl">Free fills this week</div><div class="sv" id="oos-fills"></div><div class="sh">Weekly cap</div></div>
+        <div class="stat"><div class="sl">In conversation</div><div class="sv" id="oos-convo"></div><div class="sh">Spoke with them or emailed</div></div>
       </div>
       <div class="grid2" id="callform">
         <div class="panel">
@@ -298,7 +298,6 @@ body.dark .stat{border-top-color:var(--red)}
             <div class="when" id="c-mailnote"></div>
           </div>
           <div id="cg-nomail" class="meta">No email for this outcome. The call is logged and the shop's next step is updated.</div>
-          <div id="c-cap" style="color:var(--urgent);font-size:.84rem;margin-top:6px"></div>
           <div id="c-err" style="color:var(--urgent);font-size:.84rem;margin-top:6px"></div>
           <div class="btnrow" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn btn-red" id="c-save" onclick="saveCall()">Save call</button></div>
           <div class="note">No answer or voicemail keeps the shop in the queue with a call-back date. Not interested moves it to Passed.</div>
@@ -508,7 +507,7 @@ function renderCallForm(){renderCallChips();const l=C.lead,nr=NOREACH.includes(C
  const wantsMail=!nr&&['Wants a free fill','Interested, send info'].includes(C.outcome);const has=wantsMail&&okMail(em);
  $('cg-mail').style.display=wantsMail?'':'none';$('cg-nomail').style.display=wantsMail?'none':'';
  if(wantsMail){const e=callEmail();$('c-subj').textContent=e.subject;$('c-body').textContent=e.body;$('c-mailnote').textContent=has?'This goes to your approval queue. Nothing sends until you approve it and Gmail is connected.':'Add their email to queue this. Without one, the call is still logged.'}
- const cap=+(SETTINGS.free_fill_weekly_cap||5);$('c-cap').textContent=(!nr&&C.outcome==='Wants a free fill'&&fillsThisWeek>=cap)?'You are at your weekly free-fill cap ('+fillsThisWeek+' of '+cap+').':'';$('c-err').textContent=''}
+ $('c-err').textContent=''}
 function pickCall(i){C.lead=L[i];C.reached='Owner';C.outcome='Wants a free fill';['c-name','c-email','c-note'].forEach(x=>$(x).value='');const p=PEOPLE.find(p=>p.lead_id===L[i].id);if(p){$('c-name').value=p.name||'';$('c-email').value=p.email||''}go('oos');renderCallForm();$('callform').scrollIntoView({behavior:'smooth',block:'start'})}
 async function saveCall(){const l=C.lead,err=$('c-err');if(!l){err.textContent='Pick a shop from the list first.';return}
  const nr=NOREACH.includes(C.reached),nm=$('c-name').value.trim(),em=$('c-email').value.trim(),note=$('c-note').value.trim();
@@ -531,7 +530,7 @@ async function saveCall(){const l=C.lead,err=$('c-err');if(!l){err.textContent='
  toast('Call logged for '+l.n+'.');C.lead=null;['c-name','c-email','c-note'].forEach(x=>$(x).value='');await loadAll()}
 const RLAB={spoke:'Spoke',transferred:'Spoke',got_email:'Got email',call_back:'Call back',voicemail:'Voicemail',no_answer:'No answer',not_interested:'Not interested'};
 function renderOOS(){const o=oos(),q=$('o-q').value.toLowerCase(),me=$('o-metro').value,st=$('o-stage').value;
- $('oos-total').textContent=o.length;$('oos-queue').textContent=o.filter(callable).length;$('oos-calls').textContent=callsThisWeek;$('oos-fills').textContent=fillsThisWeek+' / '+(SETTINGS.free_fill_weekly_cap||5);
+ $('oos-total').textContent=o.length;$('oos-queue').textContent=o.filter(callable).length;$('oos-calls').textContent=callsThisWeek;$('oos-convo').textContent=o.filter(l=>['In sequence','Conversation'].includes(l.st)).length;
  const rows=o.filter(l=>(!q||(l.n+' '+l.w+' '+l.a+' '+l.ph).toLowerCase().includes(q))&&(!me||l.metro===me)&&(!st||(st==='To call'?callable(l):l.st===st))).sort((a,b)=>b.s-a.s);
  $('oos-count').textContent=rows.length+' of '+o.length+' shops'+(rows.length>150?' (showing the top 150 by score)':'');
  $('oosrows').innerHTML=rows.length?rows.slice(0,150).map(l=>{const i=L.indexOf(l);const s2=callable(l)?'To call':l.st;return `<tr><td class="hd"><b onclick="openLead(${i})" style="cursor:pointer">${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Multi</span>':''}</td><td><span class="score">${l.s}</span></td><td>${h(l.metro||l.w)}</td><td>${l.ph?`<a class="lnk" href="tel:${tel(l.ph)}">${h(l.ph)}</a>`:''}</td><td>${h(l.t)}</td><td><span class="badge ${s2==='To call'?'b-tan':SB[l.st]}">${h(s2)}</span></td><td>${h(l.nx)}</td><td class="acts"><button class="btn btn-red btn-sm" onclick="pickCall(${i})">Log call</button></td></tr>`}).join(''):'<tr><td class="hd" colspan="8">No shops match these filters.</td></tr>';
