@@ -131,6 +131,8 @@ body.dark thead{background:#000;color:#f6ecdf}
 body.dark .btn-dark{background:#f6ecdf;color:#15100b}
 body.dark .toast{background:#f6ecdf;color:#15100b}
 body.dark .stat{border-top-color:var(--red)}
+.stats.s3{grid-template-columns:repeat(3,minmax(0,1fr))}
+body:not(.dark) #s-home .lbl{color:var(--cream)}
 details.more{margin:4px 0 10px}
 details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--brown);padding:8px 0;list-style-position:inside}
 .tblk{overflow-x:auto}
@@ -202,16 +204,27 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
     <section class="section active" id="s-home">
       <div class="page-h">Dashboard</div>
       <div class="page-sub" id="today"></div>
-      <div class="stats">
-        <div class="stat"><div class="sl">Total leads</div><div class="sv" id="st-total"></div><div class="sh" id="st-split"></div></div>
-        <div class="stat"><div class="sl">Active leads</div><div class="sv" id="st-active"></div><div class="sh">Not converted or passed</div></div>
+      <div class="lbl" style="color:var(--cream);margin:0 0 6px">Colorado</div>
+      <div class="stats s3">
+        <div class="stat"><div class="sl">Total leads</div><div class="sv" id="st-total"></div><div class="sh">Colorado</div></div>
         <div class="stat"><div class="sl">Dropped or shipped</div><div class="sv" id="st-worked"></div><div class="sh">Samples in their hands</div></div>
         <div class="stat"><div class="sl">Converted</div><div class="sv" id="st-conv"></div><div class="sh" id="st-rate"></div></div>
       </div>
       <div class="panel">
-        <div class="panel-title">Conversion by location type</div>
+        <div class="panel-title">Colorado: conversion by location type</div>
         <div id="convsplit"></div>
         <div class="note">Rate = converted out of dropped or shipped. Other covers resorts, convention groups and atypical retail. Distributors aren't counted.</div>
+      </div>
+      <div class="lbl" style="color:var(--cream);margin:4px 0 6px">Out of state</div>
+      <div class="stats s3">
+        <div class="stat"><div class="sl">Total shops</div><div class="sv" id="os-total"></div><div class="sh">Out of state</div></div>
+        <div class="stat"><div class="sl">Called or shipped</div><div class="sv" id="os-called"></div><div class="sh">At least one call logged</div></div>
+        <div class="stat"><div class="sl">Converted</div><div class="sv" id="os-conv"></div><div class="sh" id="os-rate"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Out of state: conversion by metro</div>
+        <div id="oossplit"></div>
+        <div class="note">Reached = you spoke with them, emailed, or shipped. Rate = converted out of reached.</div>
       </div>
       <div class="grid2">
         <div class="panel">
@@ -441,7 +454,7 @@ async function enter(){$('login').style.display='none';$('app').style.display='f
 sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'){$('app').style.display='none';$('login').style.display='flex';setMode('new')}});
 
 /* ---------- DATA ---------- */
-let L=[],Q=[],D=[],PEOPLE=[],CALLS=[],SETTINGS={},approvedCount=0,fillsThisWeek=0,callsThisWeek=0;
+let CALLED=new Set();let L=[],Q=[],D=[],PEOPLE=[],CALLS=[],SETTINGS={},approvedCount=0,fillsThisWeek=0,callsThisWeek=0;
 async function fetchAll(build){let out=[];for(let i=0;;i+=1000){const{data,error}=await build().range(i,i+999);if(error)return{error};out=out.concat(data);if(data.length<1000)break}return{data:out}}
 const mapLead=r=>({id:r.id,s:r.score,n:r.name,t:r.type,tier:r.tier,w:r.area||'',r:r.region||'',z:r.size_note||'',a:r.address||'',src:r.source||'',st:r.stage,nx:r.next_action||'',dd:r.first_touch||'',sw:r.spoke_with||'',cv:r.converted_on||'',inv:r.first_invoice||'',trk:r.track,notes:r.notes||'',ph:r.phone||'',metro:r.metro||''});
 async function loadAll(){
@@ -458,6 +471,7 @@ async function loadAll(){
   sb.from('calls').select('id',{count:'exact',head:true}).gte('called_at',wk.toISOString())]);
  const bad=[a,b,c,d,e,k].find(x=>x.error);if(bad){fail(bad.error,'Could not load');return}
  L=a.data.map(mapLead);Q=b.data;D=c.data;PEOPLE=d.data;SETTINGS=Object.fromEntries(e.data.map(x=>[x.key,x.value]));approvedCount=f.count||0;fillsThisWeek=g.count||0;CALLS=k.data;callsThisWeek=m.count||0;
+ const cl=await fetchAll(()=>sb.from('calls').select('lead_id').order('id'));CALLED=new Set((cl.data||[]).map(x=>x.lead_id));
  $('today').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
  const cur=$('ft').value;$('ft').innerHTML='<option value="">All types</option>'+[...new Set(L.filter(l=>!isOut(l)).map(l=>l.t))].sort().map(t=>'<option>'+h(t)+'</option>').join('');$('ft').value=cur;
  const fill=(id,first,vals)=>{const v=$(id).value;$(id).innerHTML='<option value="">'+first+'</option>'+vals.map(x=>'<option>'+h(x)+'</option>').join('');$(id).value=vals.includes(v)?v:''};
@@ -475,9 +489,9 @@ async function cancelEmail(id){const{error}=await sb.from('emails').update({stat
 
 /* ---------- DROP FORM ---------- */
 const WHO={'I met them':['Met the owner','Met the manager','Met the buyer'],"I didn't meet them":['Handed off to the team','Left at the front desk']};
-const CH={meet:Object.keys(WHO),type:['Hotel','Coffee shop','Specialty shop','Grocery','Gift shop'],left:['Pouches','Two-packs','One-pager','Line card'],liked:['Chocolate-Chip','Gluten-Free','Confetti','Almond'],next:['Send pricing','Offer a free fill','Ask for the buyer','Quick call'],tier:['Single location','Multi-location (Tier 2)'],att:[]};
+const CH={meet:Object.keys(WHO),type:['Hotel','Coffee shop','Specialty shop','Grocery','Gift shop'],left:['Pouches','Two-packs','One-pager','Line card'],liked:['Chocolate-Chip','Gluten-Free','Confetti','Almond'],next:['Local partners','Send pricing','Offer a free fill','Ask for the buyer'],tier:['Single location','Multi-location (Tier 2)'],att:[]};
 let S,P;
-function initForm(){S={meet:'I met them',who:'Met the owner',type:'Hotel',left:['Pouches','One-pager'],liked:[],next:'Send pricing',tier:'Single location',att:[]};P=[{n:'',e:'',r:'To'}];const d=new Date();$('droptime').value=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function initForm(){S={meet:'I met them',who:'Met the owner',type:'Hotel',left:['Pouches','One-pager'],liked:[],next:'Local partners',tier:'Single location',att:[]};P=[{n:'',e:'',r:'To'}];const d=new Date();$('droptime').value=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 function renderChips(){document.querySelectorAll('.chips').forEach(el=>{const g=el.dataset.g,opts=g==='who'?WHO[S.meet]:CH[g];el.innerHTML='';if(!opts.length){el.innerHTML='<span class="meta">Upload PDFs in Docs to attach them here.</span>';return}opts.forEach(o=>{const b=document.createElement('button');b.type='button';b.textContent=o;const on=el.dataset.one?S[g]===o:S[g].includes(o);b.className='chip'+(on?' on':'');b.onclick=()=>pick(g,o,!!el.dataset.one);el.appendChild(b)})});
  const met=S.meet==='I met them';$('fg-liked').style.display=met?'':'none';$('fg-leftwith').style.display=met?'none':''}
 function pick(g,o,one){if(one){S[g]=o;if(g==='meet')S.who=WHO[o][0]}else{const i=S[g].indexOf(o);if(i>=0)S[g].splice(i,1);else S[g].push(o)}renderChips();buildEmail()}
@@ -501,10 +515,10 @@ function buildEmail(){const biz=$('f-biz').value.trim()||'[Business]';const note
   'Met the manager':'It was great meeting you today at '+biz+'. Thank you for your time.'+liked+' If someone else handles purchasing, I\'d be glad to connect with them as well.',
   'Met the buyer':'Thank you for taking the time today at '+biz+'.'+liked+' Since you handle new products, I wanted to follow up right away.',
   'Handed off to the team':'I stopped by '+biz+' today and left '+leftTxt+' of our mandel bread with '+(lw||'your team')+' for you. I\'m sorry I missed you.',
-  'Left at the front desk':'I stopped by '+biz+' today and left '+leftTxt+' of our mandel bread '+(lw?'with '+lw:'at the front desk')+' with your name on them.'};
+  'Left at the front desk':'I stopped by '+biz+' today and left '+leftTxt+' of our mandel bread '+(lw?'with '+lw:'at the front desk')+' for you and the team to try.'};
  const STORY='We\'re a mother-son bakery in Colorado, and our mandel bread is a four-generation family recipe: a cousin of biscotti with a softer middle.';
  const FIT={'Hotel':'Hotels use our 2 oz two-packs as a welcome treat and carry our pouches in their lobby markets.','Coffee shop':'Coffee shops sell our two-packs by the register, and they pair well with coffee.','Specialty shop':'Our 7.4 oz pouches are shelf-stable for 6 months and do well as a local gift.','Grocery':'Our 7.4 oz pouches are shelf-stable for 6 months and come in four flavors, including gluten-free.','Gift shop':'Our pouches do well as a local Colorado gift, and they are shelf-stable for 6 months.'};
- const NEXT={'Send pricing':'I\'d be glad to send wholesale pricing. Would that be helpful?','Offer a free fill':'We\'d love to send a free case so you can see how it sells, with no commitment. Would that work for you?','Ask for the buyer':'Could you point me to the right person for new products?','Quick call':'Would you have 10 minutes for a quick call this week?'};
+ const NEXT={'Send pricing':'I\'d be glad to send wholesale pricing. Would that be helpful?','Offer a free fill':'We\'d love to send a free case so you can see how it sells, with no commitment. Would that work for you?','Ask for the buyer':'Could you point me to the right person for new products?','Local partners':'Do you partner with local Colorado makers? If so, I\'d love to share how we work with partners like you.'};
  const T2=S.tier==='Single location'?'':' With several locations, we\'d be glad to start with one and grow from there.';const ATT=S.att.length?'I\'ve attached our '+joinNames(S.att.map(x=>x.toLowerCase()))+'.':'';
  const body=[hi,OPEN[S.who],STORY+' '+(FIT[S.type]||FIT.Hotel)+T2,NEXT[S.next]].concat(ATT?[ATT]:[]).concat(note?[note]:[]).concat(['Best regards,\nJake Lazar\nLazar Family Bakehouse\n(303) 990-0779 | info@lazarfamilybakehouse.com']).join('\n\n');
  const met=S.meet==='I met them';
@@ -595,14 +609,20 @@ const worked=l=>!['Not dropped','Planned'].includes(l.st);
 const fmt=d=>{if(!d)return '';const p=d.split('-');return (+p[1])+'/'+(+p[2])};
 const isOut=l=>l.trk==='out_of_state';
 const mapQ=l=>l.r==='DIA'?'Denver International Airport':l.a+(isOut(l)?'':', CO');
-function renderStats(){const conv=L.filter(l=>l.st==='Converted').length,w=L.filter(worked).length,oo=L.filter(isOut).length;
- $('st-total').textContent=L.length;$('st-split').textContent=(L.length-oo)+' Colorado · '+oo+' out of state';
- $('st-active').textContent=L.filter(l=>!['Converted','Passed'].includes(l.st)).length;
- $('st-worked').textContent=w;$('st-conv').textContent=conv;$('st-rate').textContent=(w?Math.round(conv/w*100):0)+'% of dropped or shipped';
- const ty={Hotel:{w:0,c:0,p:0},Coffee:{w:0,c:0,p:0},'Specialty retail':{w:0,c:0,p:0},Airport:{w:0,c:0,p:0},Other:{w:0,c:0,p:0}};L.forEach(l=>{const k=cat(l);if(!k)return;const v=ty[k];if(worked(l))v.w++;else v.p++;if(l.st==='Converted')v.c++});
+function renderStats(){const CO=L.filter(l=>!isOut(l)),OO=L.filter(isOut);
+ const conv=CO.filter(l=>l.st==='Converted').length,w=CO.filter(worked).length;
+ $('st-total').textContent=CO.length;$('st-worked').textContent=w;$('st-conv').textContent=conv;$('st-rate').textContent=(w?Math.round(conv/w*100):0)+'% of dropped or shipped';
+ const bar=(n,d)=>{const r=d?Math.round(n/d*100):0;return d?`<span style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end"><span class="bar"><i style="width:${r}%"></i></span><b>${r}%</b></span>`:'<span class="meta">None yet</span>'};
+ const ty={Hotel:{w:0,c:0,p:0},Coffee:{w:0,c:0,p:0},'Specialty retail':{w:0,c:0,p:0},Airport:{w:0,c:0,p:0},Other:{w:0,c:0,p:0}};CO.forEach(l=>{const k=cat(l);if(!k)return;const v=ty[k];if(worked(l))v.w++;else v.p++;if(l.st==='Converted')v.c++});
  const rate=v=>v.w?v.c/v.w:-1;
  const rows=Object.entries(ty).sort((a,b)=>(rate(b[1])-rate(a[1]))||(b[1].w-a[1].w));
- $('convsplit').innerHTML='<div class="tblk"><table><thead><tr><th>Type</th><th>Dropped or shipped</th><th>Converted</th><th>Rate</th><th>Not yet dropped</th></tr></thead><tbody>'+rows.map(([k,v])=>{const r=v.w?Math.round(v.c/v.w*100):0;return `<tr><td class="hd"><b>${k}</b></td><td>${v.w}</td><td>${v.c}</td><td>${v.w?`<span style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end"><span class="bar"><i style="width:${r}%"></i></span><b>${r}%</b></span>`:'<span class="meta">No drops yet</span>'}</td><td>${v.p}</td></tr>`}).join('')+'</tbody></table></div>';
+ $('convsplit').innerHTML='<div class="tblk"><table><thead><tr><th>Type</th><th>Dropped or shipped</th><th>Converted</th><th>Rate</th><th>Not yet dropped</th></tr></thead><tbody>'+rows.map(([k,v])=>`<tr><td class="hd"><b>${k}</b></td><td>${v.w}</td><td>${v.c}</td><td>${bar(v.c,v.w)}</td><td>${v.p}</td></tr>`).join('')+'</tbody></table></div>';
+ const touched=l=>CALLED.has(l.id)||worked(l);
+ const ow=OO.filter(worked).length,oc=OO.filter(l=>l.st==='Converted').length;
+ $('os-total').textContent=OO.length;$('os-called').textContent=OO.filter(touched).length;$('os-conv').textContent=oc;$('os-rate').textContent=(ow?Math.round(oc/ow*100):0)+'% of shops reached';
+ const mt={};OO.forEach(l=>{const k=l.metro||l.w||'Other';const v=mt[k]||(mt[k]={n:0,t:0,r:0,c:0});v.n++;if(touched(l))v.t++;if(worked(l))v.r++;if(l.st==='Converted')v.c++});
+ const mrows=Object.entries(mt).sort((a,b)=>(b[1].c-a[1].c)||(b[1].r-a[1].r)||(b[1].n-a[1].n));
+ $('oossplit').innerHTML=mrows.length?'<div class="tblk"><table><thead><tr><th>Metro</th><th>Reached</th><th>Converted</th><th>Rate</th><th>Called</th><th>Shops</th></tr></thead><tbody>'+mrows.map(([k,v])=>`<tr><td class="hd"><b>${h(k)}</b></td><td>${v.r}</td><td>${v.c}</td><td>${bar(v.c,v.r)}</td><td>${v.t}</td><td>${v.n}</td></tr>`).join('')+'</tbody></table></div>':'<div class="meta">No out-of-state shops yet.</div>';
  $('recent').innerHTML=L.filter(l=>l.dd).sort((a,b)=>b.dd.localeCompare(a.dd)).slice(0,5).map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Shipped':'Dropped'} ${fmt(l.dd)} · ${h(l.t)}</div></div><span class="badge ${SB[l.st]}">${l.st}</span></div>`).join('')||'<div class="meta">No drops logged yet.</div>';
  $('convos').innerHTML=L.filter(l=>l.st==='Conversation').map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${h(l.nx)}</div></div><span class="badge b-ok">Conversation</span></div>`).join('')||'<div class="meta">None right now.</div>'}
 function renderLeads(){const q=$('q').value.toLowerCase(),reg=$('freg').value,src=$('fsrc').value,tier=$('ftier').value,ft=$('ft').value,fs=$('fs').value;const CO=L.filter(l=>!isOut(l));
