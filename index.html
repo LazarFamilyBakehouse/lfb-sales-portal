@@ -479,7 +479,8 @@ async function enter(){$('login').style.display='none';$('app').style.display='f
 sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'){$('app').style.display='none';$('login').style.display='flex';setMode('new')}});
 
 /* ---------- DATA ---------- */
-let CALLED=new Set(),CALLROWS=[],recentAll=false,sentWeek=0;
+let CALLED=new Set(),CALLROWS=[],recentAll=false,sentWeek=0,recentTrk='all';
+function setRecent(t){recentTrk=t;recentAll=true;renderStats()}
 function weekStart(){const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));d.setHours(0,0,0,0);return d}
 function weekISO(){const d=weekStart();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}let L=[],Q=[],D=[],PEOPLE=[],CALLS=[],SETTINGS={},approvedCount=0,fillsThisWeek=0,callsThisWeek=0;
 async function fetchAll(build){let out=[];for(let i=0;;i+=1000){const{data,error}=await build().range(i,i+999);if(error)return{error};out=out.concat(data);if(data.length<1000)break}return{data:out}}
@@ -679,8 +680,9 @@ function renderStats(){const CO=L.filter(l=>!isOut(l)),OO=L.filter(isOut);
  const ow=OO.filter(worked).length,oc=OO.filter(l=>l.st==='Converted').length;
  $('os-total').textContent=OO.length;$('os-shipped').textContent=OO.filter(l=>l.dd).length;$('os-called').textContent=OO.filter(touched).length;$('os-conv').textContent=oc;$('os-rate').textContent=(ow?Math.round(oc/ow*100):0)+'% of '+ow+' reached';
  $('oossplit').innerHTML=oosMetroHtml();
- const rec=L.filter(dropped).sort((a,b)=>b.dd.localeCompare(a.dd));
- $('recent-count').textContent=rec.length+' total: '+rec.filter(l=>!isOut(l)).length+' Colorado, '+rec.filter(isOut).length+' out of state';
+ const recAll=L.filter(dropped).sort((a,b)=>b.dd.localeCompare(a.dd)),nCO=recAll.filter(l=>!isOut(l)).length,nOO=recAll.length-nCO;
+ const rec=recAll.filter(l=>recentTrk==='all'||(recentTrk==='oos')===isOut(l));
+ $('recent-count').innerHTML=[['all','All '+recAll.length],['co','Colorado '+nCO],['oos','Out of state '+nOO]].map(([k,t])=>`<button class="chip${recentTrk===k?' on':''}" style="min-height:32px;padding:4px 11px;font-size:.78rem" onclick="setRecent('${k}')">${t}</button>`).join(' ');
  $('recent').innerHTML=rec.slice(0,recentAll?1000:5).map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Shipped':'Dropped'} ${fmt(l.dd)} · ${h(l.t)}</div></div><span class="badge ${SB[l.st]}">${l.st}</span></div>`).join('')||'<div class="meta">No drops logged yet.</div>';$('recent-btn').textContent=recentAll?'Show latest 5':'Show all';$('recent').style.cssText=recentAll?'max-height:460px;overflow:auto':'';
  $('convos').innerHTML=L.filter(l=>l.st==='Conversation').map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Out of state':'Colorado'} · ${h(l.nx)}</div></div><span class="badge b-ok">Conversation</span></div>`).join('')||'<div class="meta">None right now.</div>'}
 function renderLeads(){const q=$('q').value.toLowerCase(),reg=$('freg').value,src=$('fsrc').value,tier=$('ftier').value,ft=$('ft').value,fs=$('fs').value;const CO=L.filter(l=>!isOut(l));
