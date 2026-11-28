@@ -167,6 +167,9 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
   #s-drop .fgrid,#cg-contact{grid-template-columns:1fr 1fr;gap:0 8px}
   .row{padding:8px 2px}.cand,.doc,.stop{padding:7px 0}
 }
+.filters.f4{grid-template-columns:2fr 1fr 1fr 1fr}
+#cands{max-height:320px;overflow:auto;border:1px solid var(--tan);border-radius:4px;padding:0 8px}
+@media(max-width:760px){.filters,.filters.f4{grid-template-columns:1fr 1fr}.filters select{font-size:14px;padding:8px 22px 8px 8px;text-overflow:ellipsis}#cands{max-height:210px}#s-routes .grid2>.panel:first-child .fgrid{grid-template-columns:1fr 1fr}#s-routes .fgrid .fg:nth-child(3){grid-column:1/-1}.tblk th:nth-child(5),.tblk td:nth-child(5){display:table-cell}.tblk th,.tblk td{padding:5px 4px}}
 </style>
 </head>
 <body>
@@ -235,7 +238,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
         </div>
         <div>
           <div class="panel">
-            <div class="panel-title">Dropped or shipped, latest</div>
+            <div class="panel-title"><span>Dropped or shipped</span><button class="btn btn-out2 btn-sm" id="recent-btn" onclick="recentAll=!recentAll;renderStats()">Show all</button></div>
             <div id="recent"></div>
           </div>
           <div class="panel">
@@ -326,6 +329,12 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
         <div class="stat"><div class="sl">Calls this week</div><div class="sv" id="oos-calls"></div><div class="sh">Logged below</div></div>
         <div class="stat"><div class="sl">In conversation</div><div class="sv" id="oos-convo"></div><div class="sh">Spoke with them or emailed</div></div>
       </div>
+      <details class="more" id="oos-statbox" style="background:var(--cream);border-radius:6px;padding:4px 14px;margin-bottom:10px"><summary>Out-of-state stats: by metro and call results</summary>
+        <div id="oos-metro"></div>
+        <div class="lbl" style="margin:12px 0 6px">Call results</div>
+        <div id="oos-results"></div>
+        <div style="height:10px"></div>
+      </details>
       <div class="grid2" id="callform">
         <div class="panel">
           <div class="panel-title">1. Log a call</div>
@@ -358,7 +367,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
       </div>
       <div class="panel">
         <div class="panel-title">Shops to call</div>
-        <div class="filters" style="grid-template-columns:2fr 1fr 1fr 1fr">
+        <div class="filters f4">
           <input placeholder="Search shop, town or phone" id="o-q" oninput="renderOOS()">
           <select id="o-metro" onchange="renderOOS()"><option value="">All metros</option></select>
           <select id="o-stage" onchange="renderOOS()"><option value="">All stages</option><option selected>To call</option><option>In sequence</option><option>Conversation</option><option>Converted</option><option>Passed</option></select>
@@ -383,7 +392,8 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
         <div class="panel">
           <div class="panel-title">1. Build a day</div>
           <div class="fgrid">
-            <div class="fg"><label>Area</label><select id="r-area" onchange="pickTop()"></select></div>
+            <div class="fg"><label>Area</label><select id="r-area" onchange="fillTowns();pickTop()"></select></div>
+            <div class="fg"><label>Town</label><select id="r-town" onchange="pickTop()"><option value="">All towns</option></select></div>
             <div class="fg"><label>Drops in the day</label><input id="r-n" type="number" min="1" max="30" step="1" value="6" onchange="pickTop()"></div>
           </div>
           <div class="lbl" style="margin:4px 0 2px">Not yet dropped, by score</div>
@@ -455,7 +465,7 @@ async function enter(){$('login').style.display='none';$('app').style.display='f
 sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'){$('app').style.display='none';$('login').style.display='flex';setMode('new')}});
 
 /* ---------- DATA ---------- */
-let CALLED=new Set();let L=[],Q=[],D=[],PEOPLE=[],CALLS=[],SETTINGS={},approvedCount=0,fillsThisWeek=0,callsThisWeek=0;
+let CALLED=new Set(),CALLROWS=[],recentAll=false;let L=[],Q=[],D=[],PEOPLE=[],CALLS=[],SETTINGS={},approvedCount=0,fillsThisWeek=0,callsThisWeek=0;
 async function fetchAll(build){let out=[];for(let i=0;;i+=1000){const{data,error}=await build().range(i,i+999);if(error)return{error};out=out.concat(data);if(data.length<1000)break}return{data:out}}
 const mapLead=r=>({id:r.id,s:r.score,n:r.name,t:r.type,tier:r.tier,w:r.area||'',r:r.region||'',z:r.size_note||'',a:r.address||'',src:r.source||'',st:r.stage,nx:r.next_action||'',dd:r.first_touch||'',sw:r.spoke_with||'',cv:r.converted_on||'',inv:r.first_invoice||'',trk:r.track,notes:r.notes||'',ph:r.phone||'',metro:r.metro||''});
 async function loadAll(){
@@ -472,12 +482,12 @@ async function loadAll(){
   sb.from('calls').select('id',{count:'exact',head:true}).gte('called_at',wk.toISOString())]);
  const bad=[a,b,c,d,e,k].find(x=>x.error);if(bad){fail(bad.error,'Could not load');return}
  L=a.data.map(mapLead);Q=b.data;D=c.data;PEOPLE=d.data;SETTINGS=Object.fromEntries(e.data.map(x=>[x.key,x.value]));approvedCount=f.count||0;fillsThisWeek=g.count||0;CALLS=k.data;callsThisWeek=m.count||0;
- const cl=await fetchAll(()=>sb.from('calls').select('lead_id').order('id'));CALLED=new Set((cl.data||[]).map(x=>x.lead_id));
+ const cl=await fetchAll(()=>sb.from('calls').select('lead_id,result,called_at').order('id'));CALLROWS=cl.data||[];CALLED=new Set(CALLROWS.map(x=>x.lead_id));
  $('today').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
  const cur=$('ft').value;$('ft').innerHTML='<option value="">All types</option>'+[...new Set(L.filter(l=>!isOut(l)).map(l=>l.t))].sort().map(t=>'<option>'+h(t)+'</option>').join('');$('ft').value=cur;
  const fill=(id,first,vals)=>{const v=$(id).value;$(id).innerHTML='<option value="">'+first+'</option>'+vals.map(x=>'<option>'+h(x)+'</option>').join('');$(id).value=vals.includes(v)?v:''};
  fill('freg','All regions',[...new Set(L.filter(l=>!isOut(l)).map(l=>l.r).filter(Boolean))].sort());fill('fsrc','All sources',[...new Set(L.filter(l=>!isOut(l)).map(l=>l.src).filter(Boolean))].sort());fill('o-metro','All metros',[...new Set(oos().map(l=>l.metro).filter(Boolean))].sort());
- const ar=[...new Set(L.filter(l=>l.trk!=='out_of_state').map(l=>l.r).filter(Boolean))];const ca=$('r-area').value;$('r-area').innerHTML=ar.map(x=>'<option>'+h(x)+'</option>').join('');if(ar.includes(ca))$('r-area').value=ca;
+ const ar=[...new Set(L.filter(l=>l.trk!=='out_of_state').map(l=>l.r).filter(Boolean))];const ca=$('r-area').value;$('r-area').innerHTML=ar.map(x=>'<option>'+h(x)+'</option>').join('');if(ar.includes(ca))$('r-area').value=ca;{const tv=$('r-town').value;fillTowns();$('r-town').value=tv;if($('r-town').value!==tv)$('r-town').value=''}
  CH.att=D.map(x=>x.name);S.att=S.att.filter(x=>CH.att.includes(x));
  renderChips();buildEmail();renderQ();renderAll();renderOOS();renderDocs();lab();gmailStatus()}
 
@@ -610,6 +620,7 @@ function renderOOS(){const o=oos(),q=$('o-q').value.toLowerCase(),me=$('o-metro'
  $('oos-count').textContent=rows.length+' of '+o.length+' shops'+(rows.length>oosLimit?' (showing '+oosLimit+')':'');$('oos-more').style.display=rows.length>oosLimit?'':'none';
  $('oosrows').innerHTML=rows.length?rows.slice(0,oosLimit).map(l=>{const i=L.indexOf(l);const s2=callable(l)?'To call':l.st;return `<tr><td class="hd"><b onclick="openLead(${i})" style="cursor:pointer">${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Multi</span>':''}</td><td><span class="score">${l.s}</span></td><td>${h(l.metro||l.w)}</td><td>${l.ph?`<a class="lnk" href="tel:${tel(l.ph)}">${h(l.ph)}</a>`:''}</td><td>${h(l.t)}</td><td><span class="badge ${s2==='To call'?'b-tan':SB[l.st]}">${h(s2)}</span></td><td>${h(l.nx)}</td><td class="acts"><button class="btn btn-red btn-sm" onclick="pickCall(${i})">Log call</button></td></tr>`}).join(''):'<tr><td class="hd" colspan="8">No shops match these filters.</td></tr>';
  $('calllog').innerHTML=CALLS.length?CALLS.map(c=>`<tr><td class="hd"><b>${h(c.leads?c.leads.name:'')}</b></td><td>${h(fmtWhen(c.called_at))}</td><td>${h(c.reached||'')}${c.contact_name?' ('+h(c.contact_name)+')':''}</td><td>${h(c.interest||RLAB[c.result]||c.result)}</td><td>${h(c.next_step||'')}</td><td>${h(c.summary||'')}</td></tr>`).join(''):'<tr><td class="hd" colspan="6">No calls logged yet.</td></tr>';
+ $('oos-metro').innerHTML=oosMetroHtml();$('oos-results').innerHTML=oosResultsHtml();
  renderCallForm();lab()}
 
 /* ---------- DASHBOARD + LEADS ---------- */
@@ -621,6 +632,15 @@ const worked=l=>!['Not dropped','Planned'].includes(l.st);
 const fmt=d=>{if(!d)return '';const p=d.split('-');return (+p[1])+'/'+(+p[2])};
 const isOut=l=>l.trk==='out_of_state';
 const mapQ=l=>l.r==='DIA'?'Denver International Airport':l.a+(isOut(l)?'':', CO');
+function oosMetroHtml(){const OO=L.filter(isOut),touched=l=>CALLED.has(l.id)||worked(l),mt={};
+ OO.forEach(l=>{const k=l.metro||l.w||'Other';const v=mt[k]||(mt[k]={n:0,t:0,r:0,c:0});v.n++;if(touched(l))v.t++;if(worked(l))v.r++;if(l.st==='Converted')v.c++});
+ const rows=Object.entries(mt).sort((a,b)=>(b[1].c-a[1].c)||(b[1].r-a[1].r)||(b[1].n-a[1].n));
+ const bar=(n,d)=>{const r=d?Math.round(n/d*100):0;return d?`<b>${r}%</b>`:'<span class="meta">None yet</span>'};
+ return rows.length?'<div class="tblk"><table><thead><tr><th>Metro</th><th>Reached</th><th>Converted</th><th>Rate</th><th>Called</th><th>Shops</th></tr></thead><tbody>'+rows.map(([k,v])=>`<tr><td class="hd"><b>${h(k)}</b></td><td>${v.r}</td><td>${v.c}</td><td>${bar(v.c,v.r)}</td><td>${v.t}</td><td>${v.n}</td></tr>`).join('')+'</tbody></table></div>':'<div class="meta">No out-of-state shops yet.</div>'}
+function oosResultsHtml(){const wk=new Date();wk.setDate(wk.getDate()-((wk.getDay()+6)%7));wk.setHours(0,0,0,0);
+ const G=[['Spoke with them',['spoke','transferred','got_email']],['Got an email',['got_email']],['Voicemail',['voicemail']],['No answer',['no_answer']],['Call back later',['call_back']],['Not interested',['not_interested']]];
+ const cnt=(set,w)=>CALLROWS.filter(c=>set.includes(c.result)&&(!w||new Date(c.called_at)>=wk)).length;
+ return '<div class="tblk"><table><thead><tr><th>Result</th><th>This week</th><th>All time</th></tr></thead><tbody>'+G.map(([n,set])=>`<tr><td class="hd"><b>${n}</b></td><td>${cnt(set,1)}</td><td>${cnt(set,0)}</td></tr>`).join('')+`<tr><td class="hd"><b>Total calls</b></td><td>${CALLROWS.filter(c=>new Date(c.called_at)>=wk).length}</td><td>${CALLROWS.length}</td></tr></tbody></table></div>`}
 function renderStats(){const CO=L.filter(l=>!isOut(l)),OO=L.filter(isOut);
  const conv=CO.filter(l=>l.st==='Converted').length,w=CO.filter(worked).length;
  $('st-total').textContent=CO.length;$('st-worked').textContent=w;$('st-conv').textContent=conv;$('st-rate').textContent=(w?Math.round(conv/w*100):0)+'% of dropped or shipped';
@@ -632,10 +652,8 @@ function renderStats(){const CO=L.filter(l=>!isOut(l)),OO=L.filter(isOut);
  const touched=l=>CALLED.has(l.id)||worked(l);
  const ow=OO.filter(worked).length,oc=OO.filter(l=>l.st==='Converted').length;
  $('os-total').textContent=OO.length;$('os-called').textContent=OO.filter(touched).length;$('os-conv').textContent=oc;$('os-rate').textContent=(ow?Math.round(oc/ow*100):0)+'% of shops reached';
- const mt={};OO.forEach(l=>{const k=l.metro||l.w||'Other';const v=mt[k]||(mt[k]={n:0,t:0,r:0,c:0});v.n++;if(touched(l))v.t++;if(worked(l))v.r++;if(l.st==='Converted')v.c++});
- const mrows=Object.entries(mt).sort((a,b)=>(b[1].c-a[1].c)||(b[1].r-a[1].r)||(b[1].n-a[1].n));
- $('oossplit').innerHTML=mrows.length?'<div class="tblk"><table><thead><tr><th>Metro</th><th>Reached</th><th>Converted</th><th>Rate</th><th>Called</th><th>Shops</th></tr></thead><tbody>'+mrows.map(([k,v])=>`<tr><td class="hd"><b>${h(k)}</b></td><td>${v.r}</td><td>${v.c}</td><td>${bar(v.c,v.r)}</td><td>${v.t}</td><td>${v.n}</td></tr>`).join('')+'</tbody></table></div>':'<div class="meta">No out-of-state shops yet.</div>';
- $('recent').innerHTML=L.filter(l=>l.dd).sort((a,b)=>b.dd.localeCompare(a.dd)).slice(0,5).map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Shipped':'Dropped'} ${fmt(l.dd)} · ${h(l.t)}</div></div><span class="badge ${SB[l.st]}">${l.st}</span></div>`).join('')||'<div class="meta">No drops logged yet.</div>';
+ $('oossplit').innerHTML=oosMetroHtml();
+ $('recent').innerHTML=L.filter(l=>l.dd).sort((a,b)=>b.dd.localeCompare(a.dd)).slice(0,recentAll?1000:5).map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Shipped':'Dropped'} ${fmt(l.dd)} · ${h(l.t)}</div></div><span class="badge ${SB[l.st]}">${l.st}</span></div>`).join('')||'<div class="meta">No drops logged yet.</div>';$('recent-btn').textContent=recentAll?'Show latest 5':'Show all';$('recent').style.cssText=recentAll?'max-height:460px;overflow:auto':'';
  $('convos').innerHTML=L.filter(l=>l.st==='Conversation').map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${h(l.nx)}</div></div><span class="badge b-ok">Conversation</span></div>`).join('')||'<div class="meta">None right now.</div>'}
 function renderLeads(){const q=$('q').value.toLowerCase(),reg=$('freg').value,src=$('fsrc').value,tier=$('ftier').value,ft=$('ft').value,fs=$('fs').value;const CO=L.filter(l=>!isOut(l));
  const rows=CO.filter(l=>(!q||(l.n+' '+l.w+' '+l.a).toLowerCase().includes(q))&&(!reg||l.r===reg)&&(!src||l.src===src)&&(!tier||l.tier===+tier)&&(!ft||l.t===ft)&&(!fs||l.st===fs));const so=$('fsort').value;rows.sort(so==='w'?(a,b)=>a.s-b.s:so==='n'?(a,b)=>a.n.localeCompare(b.n):so==='d'?(a,b)=>(b.dd||'').localeCompare(a.dd||'')||b.s-a.s:(a,b)=>b.s-a.s);
@@ -675,7 +693,8 @@ async function addLead(){const name=$('n-name').value.trim();if(!name){$('n-err'
 
 /* ---------- ROUTES ---------- */
 let picked=[];
-function cands(){const a=$('r-area').value;return L.filter(l=>!worked(l)&&!isOut(l)&&l.r===a).sort((x,y)=>y.s-x.s)}
+function fillTowns(){const a=$('r-area').value,c={};L.forEach(l=>{if(!worked(l)&&!isOut(l)&&l.r===a&&l.w)c[l.w]=(c[l.w]||0)+1});$('r-town').innerHTML='<option value="">All towns</option>'+Object.entries(c).sort((x,y)=>y[1]-x[1]).map(([t,n])=>'<option value="'+h(t)+'">'+h(t)+' ('+n+')</option>').join('')}
+function cands(){const a=$('r-area').value,t=$('r-town').value;return L.filter(l=>!worked(l)&&!isOut(l)&&l.r===a&&(!t||l.w===t)).sort((x,y)=>y.s-x.s)}
 function pickTop(){const n=Math.max(1,Math.min(30,Math.round(+$('r-n').value||1)));$('r-n').value=n;picked=cands().slice(0,n).map(l=>l.id);renderRoute()}
 function togglePick(id,on){if(on){if(!picked.includes(id))picked.push(id)}else picked=picked.filter(x=>x!==id);renderRoute(true)}
 function renderRoute(keep){const c=cands(),n=+$('r-n').value;
