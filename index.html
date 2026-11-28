@@ -169,7 +169,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
 }
 .filters.f4{grid-template-columns:2fr 1fr 1fr 1fr}
 #cands{max-height:320px;overflow:auto;border:1px solid var(--tan);border-radius:4px;padding:0 8px}
-@media(max-width:760px){.filters,.filters.f4{grid-template-columns:1fr 1fr}.filters select{font-size:14px;padding:8px 22px 8px 8px;text-overflow:ellipsis}#cands{max-height:210px}#s-routes .grid2>.panel:first-child .fgrid{grid-template-columns:1fr 1fr}#s-routes .fgrid .fg:nth-child(3){grid-column:1/-1}.tblk th:nth-child(5),.tblk td:nth-child(5){display:table-cell}.tblk th,.tblk td{padding:5px 4px}}
+@media(max-width:760px){.filters,.filters.f4{grid-template-columns:1fr 1fr}.filters select{font-size:14px;padding:8px 22px 8px 8px;text-overflow:ellipsis}#cands{max-height:210px}#s-routes .grid2>.panel:first-child .fgrid{grid-template-columns:1fr 1fr}#s-routes .fgrid .fg:nth-child(3){grid-column:auto}.tblk th:nth-child(5),.tblk td:nth-child(5){display:table-cell}.tblk th,.tblk td{padding:5px 4px}}
 .tapstat{cursor:pointer}
 #s-oos .stats{grid-template-columns:repeat(5,minmax(0,1fr))}
 @media(max-width:760px){#s-oos .stats{grid-template-columns:1fr 1fr}#s-oos .stats .stat:first-child{grid-column:1/-1}}
@@ -398,7 +398,8 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
           <div class="panel-title">1. Build a day</div>
           <div class="fgrid">
             <div class="fg"><label>Area</label><select id="r-area" onchange="fillTowns();pickTop()"></select></div>
-            <div class="fg"><label>Town</label><select id="r-town" onchange="pickTop()"><option value="">All towns</option></select></div>
+            <div class="fg"><label>Town</label><select id="r-town" onchange="fillTypes();pickTop()"><option value="">All towns</option></select></div>
+            <div class="fg"><label>Type of place</label><select id="r-type" onchange="pickTop()"><option value="">All types</option></select></div>
             <div class="fg"><label>Drops in the day</label><input id="r-n" type="number" min="1" max="30" step="1" value="6" onchange="pickTop()"></div>
           </div>
           <div class="lbl" style="margin:4px 0 2px">Not yet dropped, by score</div>
@@ -707,8 +708,9 @@ async function addLead(){const name=$('n-name').value.trim();if(!name){$('n-err'
 
 /* ---------- ROUTES ---------- */
 let picked=[];
-function fillTowns(){const a=$('r-area').value,c={};L.forEach(l=>{if(!worked(l)&&!isOut(l)&&l.r===a&&l.w)c[l.w]=(c[l.w]||0)+1});$('r-town').innerHTML='<option value="">All towns</option>'+Object.entries(c).sort((x,y)=>y[1]-x[1]).map(([t,n])=>'<option value="'+h(t)+'">'+h(t)+' ('+n+')</option>').join('')}
-function cands(){const a=$('r-area').value,t=$('r-town').value;return L.filter(l=>!worked(l)&&!isOut(l)&&l.r===a&&(!t||l.w===t)).sort((x,y)=>y.s-x.s)}
+function fillTowns(){const a=$('r-area').value,c={};L.forEach(l=>{if(!worked(l)&&!isOut(l)&&l.r===a&&l.w)c[l.w]=(c[l.w]||0)+1});$('r-town').innerHTML='<option value="">All towns</option>'+Object.entries(c).sort((x,y)=>y[1]-x[1]).map(([t,n])=>'<option value="'+h(t)+'">'+h(t)+' ('+n+')</option>').join('');fillTypes()}
+function fillTypes(){const a=$('r-area').value,t=$('r-town').value,c={},v=$('r-type').value;L.forEach(l=>{if(!worked(l)&&!isOut(l)&&l.r===a&&(!t||l.w===t))c[l.t]=(c[l.t]||0)+1});$('r-type').innerHTML='<option value="">All types</option>'+Object.entries(c).sort((x,y)=>y[1]-x[1]).map(([k,n])=>'<option value="'+h(k)+'">'+h(k)+' ('+n+')</option>').join('');$('r-type').value=c[v]?v:''}
+function cands(){const a=$('r-area').value,t=$('r-town').value,ty=$('r-type').value;return L.filter(l=>!worked(l)&&!isOut(l)&&l.r===a&&(!t||l.w===t)&&(!ty||l.t===ty)).sort((x,y)=>y.s-x.s)}
 function pickTop(){const n=Math.max(1,Math.min(30,Math.round(+$('r-n').value||1)));$('r-n').value=n;picked=cands().slice(0,n).map(l=>l.id);renderRoute()}
 function togglePick(id,on){if(on){if(!picked.includes(id))picked.push(id)}else picked=picked.filter(x=>x!==id);renderRoute(true)}
 function renderRoute(keep){const c=cands(),n=+$('r-n').value;
