@@ -173,6 +173,17 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
 .tapstat{cursor:pointer}
 #s-oos .stats{grid-template-columns:repeat(6,minmax(0,1fr))}
 @media(max-width:760px){#s-oos .stats{grid-template-columns:1fr 1fr 1fr}}
+.hb{display:grid;grid-template-columns:110px 1fr 64px;gap:8px;align-items:center;margin:5px 0;font-size:.8rem}
+.hbl{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hbt{background:var(--cream-dk);border-radius:4px;height:16px;overflow:hidden}
+.hbf{height:100%;background:var(--tan-dk);border-radius:4px;overflow:hidden}.hbp{height:100%;background:var(--red)}.hbv{text-align:right;color:var(--muted);font-size:.74rem}
+.hbleg{display:flex;gap:14px;font-size:.72rem;color:var(--muted);margin-bottom:6px}.hbleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.k1{background:var(--tan-dk)}.k2{background:var(--red)}.k3{background:var(--brown-dk)}
+.vb{display:flex;gap:6px;align-items:flex-end;height:150px}.vbg{flex:1;display:flex;flex-direction:column;height:100%;min-width:0}
+.vbb{flex:1;display:flex;gap:3px;align-items:flex-end;justify-content:center;border-bottom:1px solid var(--tan)}
+.vb1,.vb2{width:42%;max-width:26px;min-height:1px;border-radius:3px 3px 0 0;position:relative}.vb1{background:var(--red)}.vb2{background:var(--brown-dk)}
+.vb1 span,.vb2 span{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:.66rem;font-weight:700;color:var(--brown)}
+.vbl{text-align:center;font-size:.66rem;color:var(--muted);padding-top:4px}
+@media(max-width:760px){.hb{grid-template-columns:84px 1fr 54px}.vb{height:120px}}
 </style>
 </head>
 <body>
@@ -216,6 +227,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
         <div class="stat tapstat" onclick="go('oos')"><div class="sl">Calls</div><div class="sv" id="wk-calls"></div><div class="sh">Logged since Monday</div></div>
         <div class="stat"><div class="sl">Emails sent</div><div class="sv" id="wk-sent"></div><div class="sh">Through the portal</div></div>
       </div>
+      <div class="panel"><div class="panel-title">Last 8 weeks</div><div id="wkchart"></div></div>
       <div class="lbl" style="color:var(--cream);margin:0 0 6px">Colorado</div>
       <div class="stats s3">
         <div class="stat tapstat" onclick="showLeads('')"><div class="sl">Total leads</div><div class="sv" id="st-total"></div><div class="sh">Colorado</div></div>
@@ -224,6 +236,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
       </div>
       <div class="panel">
         <div class="panel-title">Colorado: conversion by location type</div>
+        <div id="convbars" style="margin-bottom:12px"></div>
         <div id="convsplit"></div>
         <div class="note">A lead counts as dropped or shipped once it has a drop date, and as converted only if it was dropped first. Existing customers loaded without a drop date are shown separately. Distributors aren't counted in this table.</div>
       </div>
@@ -236,6 +249,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
       </div>
       <div class="panel">
         <div class="panel-title">Out of state: conversion by metro</div>
+        <div id="oosbars" style="margin-bottom:12px"></div>
         <div id="oossplit"></div>
         <div class="note">Reached = you spoke with them, emailed, or shipped. Rate = converted out of reached. Tap a box above to see exactly which shops it counts.</div>
       </div>
@@ -662,6 +676,12 @@ function oosResultsHtml(){const wk=new Date();wk.setDate(wk.getDate()-((wk.getDa
  return '<div class="tblk"><table><thead><tr><th>Result</th><th>This week</th><th>All time</th></tr></thead><tbody>'+G.map(([n,set])=>`<tr><td class="hd"><b>${n}</b></td><td>${cnt(set,1)}</td><td>${cnt(set,0)}</td></tr>`).join('')+`<tr><td class="hd"><b>Total calls</b></td><td>${CALLROWS.filter(c=>new Date(c.called_at)>=wk).length}</td><td>${CALLROWS.length}</td></tr></tbody></table></div>`}
 function showLeads(st){['q','freg','fsrc','ftier','ft'].forEach(i=>$(i).value='');$('fs').value=st;leadLimit=200;renderLeads();go('leads')}
 function showOOS(st){$('o-q').value='';$('o-metro').value='';$('o-stage').value=st;oosLimit=150;renderOOS();go('oos')}
+function barsH(rows,l1,l2){const mx=Math.max(1,...rows.map(r=>r[1]));return `<div class="hbleg"><span><i class="k1"></i>${l1}</span><span><i class="k2"></i>${l2}</span></div>`+rows.map(([n,t,p])=>`<div class="hb"><div class="hbl">${h(n)}</div><div class="hbt"><div class="hbf" style="width:${Math.max(t?2:0,t/mx*100)}%"><div class="hbp" style="width:${t?p/t*100:0}%"></div></div></div><div class="hbv">${p} / ${t}</div></div>`).join('')}
+function weekChart(){const ws=weekStart(),wks=[];for(let i=7;i>=0;i--){const a=new Date(ws);a.setDate(a.getDate()-7*i);const b=new Date(a);b.setDate(b.getDate()+7);wks.push([a,b])}
+ const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+ const data=wks.map(([a,b])=>{const ai=iso(a),bi=iso(b);return{lab:(a.getMonth()+1)+'/'+a.getDate(),d:L.filter(l=>l.dd&&l.dd>=ai&&l.dd<bi).length,c:CALLROWS.filter(c=>{const t=new Date(c.called_at);return t>=a&&t<b}).length}});
+ const mx=Math.max(1,...data.map(x=>Math.max(x.d,x.c)));
+ return `<div class="hbleg"><span><i class="k2"></i>Drops and shipments</span><span><i class="k3"></i>Calls</span></div><div class="vb">`+data.map(x=>`<div class="vbg"><div class="vbb"><div class="vb1" style="height:${x.d/mx*100}%" title="${x.d} drops"><span>${x.d||''}</span></div><div class="vb2" style="height:${x.c/mx*100}%" title="${x.c} calls"><span>${x.c||''}</span></div></div><div class="vbl">${x.lab}</div></div>`).join('')+'</div>'}
 function renderStats(){const CO=L.filter(l=>!isOut(l)),OO=L.filter(isOut);
  // A lead counts as dropped or shipped only when it has a drop or ship date. Converted counts only those.
  const dropped=l=>!!l.dd,won=l=>l.st==='Converted'&&!!l.dd,existing=l=>l.st==='Converted'&&!l.dd;
@@ -676,6 +696,8 @@ function renderStats(){const CO=L.filter(l=>!isOut(l)),OO=L.filter(isOut);
  const rate=v=>v.w?v.c/v.w:-1;
  const rows=Object.entries(ty).sort((a,b)=>(rate(b[1])-rate(a[1]))||(b[1].w-a[1].w));
  $('convsplit').innerHTML='<div class="tblk"><table><thead><tr><th>Type</th><th>Dropped or shipped</th><th>Converted</th><th>Rate</th><th>Not yet dropped</th></tr></thead><tbody>'+rows.map(([k,v])=>`<tr><td class="hd"><b>${k}</b></td><td>${v.w}</td><td>${v.c}</td><td>${pct(v.c,v.w)}</td><td>${v.p}</td></tr>`).join('')+'</tbody></table></div>';
+ $('convbars').innerHTML=barsH(rows.map(([k,v])=>[k,v.w,v.c]),'Dropped or shipped','Converted');$('wkchart').innerHTML=weekChart();
+ {const mt={};OO.forEach(l=>{const k=l.metro||l.w||'Other';const v=mt[k]||(mt[k]={n:0,t:0});v.n++;if(CALLED.has(l.id)||worked(l))v.t++});$('oosbars').innerHTML=barsH(Object.entries(mt).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>[k,v.n,v.t]),'Shops','Contacted')}
  const touched=l=>CALLED.has(l.id)||worked(l);
  const ow=OO.filter(worked).length,oc=OO.filter(l=>l.st==='Converted').length;
  $('os-total').textContent=OO.length;$('os-shipped').textContent=OO.filter(l=>l.dd).length;$('os-called').textContent=OO.filter(touched).length;$('os-conv').textContent=oc;$('os-rate').textContent=(ow?Math.round(oc/ow*100):0)+'% of '+ow+' reached';
