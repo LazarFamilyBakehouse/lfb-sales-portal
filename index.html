@@ -437,7 +437,7 @@ function go(s){document.querySelectorAll('#tabs button').forEach(x=>x.classList.
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>go(b.dataset.s));
 function lab(){document.querySelectorAll('.tbl table').forEach(t=>{const hd=[...t.querySelectorAll('th')].map(x=>x.textContent);t.querySelectorAll('tbody tr').forEach(r=>[...r.children].forEach((td,i)=>td.dataset.label=hd[i]||''))})}
 const isApple=/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
-function mapPref(){let v=null;try{v=localStorage.getItem('lfbmaps')}catch(e){}return v||(isApple?'apple':'google')}
+function mapPref(){let v=null;try{v=localStorage.getItem('lfbmaps')}catch(e){}return v||'apple'}
 function setMaps(v){try{localStorage.setItem('lfbmaps',v)}catch(e){}renderRoute(true)}
 function mapLink(q){return mapPref()==='apple'?'https://maps.apple.com/?q='+encodeURIComponent(q):'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q)}
 function dirLink(st){const e=st.map(encodeURIComponent);if(mapPref()==='apple')return e.length===1?'https://maps.apple.com/?dirflg=d&daddr='+e[0]:'https://maps.apple.com/directions?mode=driving&destination='+e[e.length-1]+e.slice(0,-1).map(x=>'&waypoint='+x).join('');return 'https://www.google.com/maps/dir/'+e.join('/')}
@@ -698,11 +698,11 @@ function cands(){const a=$('r-area').value,t=$('r-town').value;return L.filter(l
 function pickTop(){const n=Math.max(1,Math.min(30,Math.round(+$('r-n').value||1)));$('r-n').value=n;picked=cands().slice(0,n).map(l=>l.id);renderRoute()}
 function togglePick(id,on){if(on){if(!picked.includes(id))picked.push(id)}else picked=picked.filter(x=>x!==id);renderRoute(true)}
 function renderRoute(keep){const c=cands(),n=+$('r-n').value;
- if(!keep)$('cands').innerHTML=c.length?c.map(l=>`<div class="cand"><input type="checkbox" id="c${l.id}" ${picked.includes(l.id)?'checked':''} onchange="togglePick('${l.id}',this.checked)"><label for="c${l.id}"><b>${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Tier 2</span>':''}<div class="meta">${h(l.a)} · score ${l.s}</div></label></div>`).join(''):'<div class="meta">No undropped leads in this area yet.</div>';
+ if(!keep)$('cands').innerHTML=c.length?c.map(l=>`<div class="cand"><input type="checkbox" id="c${l.id}" ${picked.includes(l.id)?'checked':''} onchange="togglePick('${l.id}',this.checked)"><label for="c${l.id}"><b>${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Tier 2</span>':''}<div class="meta">${h(l.a)}</div></label><span class="score" title="Lead score">${l.s}</span></div>`).join(''):'<div class="meta">No undropped leads in this area yet.</div>';
  $('r-note').textContent=c.length<n?'Only '+c.length+' undropped in this area. Add more leads to fill a '+n+'-drop day.':picked.length+' of '+c.length+' selected.';
  const st=L.filter(l=>picked.includes(l.id)).sort((x,y)=>y.s-x.s);
  $('rt-title').textContent='2. Route: '+st.length+(st.length===1?' stop':' stops');
- $('stops').innerHTML=st.length?st.map((l,k)=>`<div class="stop"><span class="n">${k+1}</span><div style="flex:1;min-width:0"><b>${h(l.n)}</b><div class="meta">${h(l.a)}</div></div><a class="btn btn-out2 btn-sm" target="_blank" rel="noopener" href="${dirLink([l.r==='DIA'?'Denver International Airport':l.n+', '+mapQ(l)])}">Go</a><button class="btn btn-out2 btn-sm" onclick="startDrop(${L.indexOf(l)})">Dropped</button></div>`).join(''):'<div class="meta">Select stops on the left.</div>';
+ $('stops').innerHTML=st.length?st.map((l,k)=>`<div class="stop"><span class="n">${k+1}</span><div style="flex:1;min-width:0"><b>${h(l.n)}</b><div class="meta">${h(l.a)}</div></div><span class="badge b-tan" title="Lead score">Score ${l.s}</span><a class="btn btn-out2 btn-sm" target="_blank" rel="noopener" href="${dirLink([l.r==='DIA'?'Denver International Airport':l.n+', '+mapQ(l)])}">Go</a><button class="btn btn-out2 btn-sm" onclick="startDrop(${L.indexOf(l)})">Dropped</button></div>`).join(''):'<div class="meta">Select stops on the left.</div>';
  const m=$('r-maps');$('mapsel').value=mapPref();if(st.length){m.href=dirLink(st.map(l=>l.r==='DIA'?'Denver International Airport':l.n+', '+mapQ(l)).filter((v,i,a)=>a.indexOf(v)===i));m.style.display=''}else m.style.display='none'}
 
 /* ---------- DOCS ---------- */
