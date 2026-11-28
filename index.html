@@ -170,6 +170,9 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
 .filters.f4{grid-template-columns:2fr 1fr 1fr 1fr}
 #cands{max-height:320px;overflow:auto;border:1px solid var(--tan);border-radius:4px;padding:0 8px}
 @media(max-width:760px){.filters,.filters.f4{grid-template-columns:1fr 1fr}.filters select{font-size:14px;padding:8px 22px 8px 8px;text-overflow:ellipsis}#cands{max-height:210px}#s-routes .grid2>.panel:first-child .fgrid{grid-template-columns:1fr 1fr}#s-routes .fgrid .fg:nth-child(3){grid-column:1/-1}.tblk th:nth-child(5),.tblk td:nth-child(5){display:table-cell}.tblk th,.tblk td{padding:5px 4px}}
+.tapstat{cursor:pointer}
+#s-oos .stats{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:760px){#s-oos .stats{grid-template-columns:1fr 1fr}#s-oos .stats .stat:first-child{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -209,25 +212,25 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
       <div class="page-sub" id="today"></div>
       <div class="lbl" style="color:var(--cream);margin:0 0 6px">Colorado</div>
       <div class="stats s3">
-        <div class="stat"><div class="sl">Total leads</div><div class="sv" id="st-total"></div><div class="sh">Colorado</div></div>
-        <div class="stat"><div class="sl">Dropped or shipped</div><div class="sv" id="st-worked"></div><div class="sh">Samples in their hands</div></div>
-        <div class="stat"><div class="sl">Converted</div><div class="sv" id="st-conv"></div><div class="sh" id="st-rate"></div></div>
+        <div class="stat tapstat" onclick="showLeads('')"><div class="sl">Total leads</div><div class="sv" id="st-total"></div><div class="sh">Colorado</div></div>
+        <div class="stat tapstat" onclick="showLeads('__dropped')"><div class="sl">Dropped or shipped</div><div class="sv" id="st-worked"></div><div class="sh">Have a drop date</div></div>
+        <div class="stat tapstat" onclick="showLeads('Converted')"><div class="sl">Converted</div><div class="sv" id="st-conv"></div><div class="sh" id="st-rate"></div></div>
       </div>
       <div class="panel">
         <div class="panel-title">Colorado: conversion by location type</div>
         <div id="convsplit"></div>
-        <div class="note">Rate = converted out of dropped or shipped. Other covers resorts, convention groups and atypical retail. Distributors aren't counted.</div>
+        <div class="note">A lead counts as dropped or shipped once it has a drop date, and as converted only if it was dropped first. Existing customers loaded without a drop date are shown separately. Distributors aren't counted in this table.</div>
       </div>
       <div class="lbl" style="color:var(--cream);margin:4px 0 6px">Out of state</div>
       <div class="stats s3">
-        <div class="stat"><div class="sl">Total shops</div><div class="sv" id="os-total"></div><div class="sh">Out of state</div></div>
-        <div class="stat"><div class="sl">Called or shipped</div><div class="sv" id="os-called"></div><div class="sh">At least one call logged</div></div>
-        <div class="stat"><div class="sl">Converted</div><div class="sv" id="os-conv"></div><div class="sh" id="os-rate"></div></div>
+        <div class="stat tapstat" onclick="showOOS('')"><div class="sl">Total shops</div><div class="sv" id="os-total"></div><div class="sh">Out of state</div></div>
+        <div class="stat"><div class="sl">Contacted</div><div class="sv" id="os-called"></div><div class="sh">Called, emailed or shipped</div></div>
+        <div class="stat tapstat" onclick="showOOS('Converted')"><div class="sl">Converted</div><div class="sv" id="os-conv"></div><div class="sh" id="os-rate"></div></div>
       </div>
       <div class="panel">
         <div class="panel-title">Out of state: conversion by metro</div>
         <div id="oossplit"></div>
-        <div class="note">Reached = you spoke with them, emailed, or shipped. Rate = converted out of reached.</div>
+        <div class="note">Reached = you spoke with them, emailed, or shipped. Rate = converted out of reached. Tap a box above to see exactly which shops it counts.</div>
       </div>
       <div class="grid2">
         <div class="panel">
@@ -239,6 +242,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
         <div>
           <div class="panel">
             <div class="panel-title"><span>Dropped or shipped</span><button class="btn btn-out2 btn-sm" id="recent-btn" onclick="recentAll=!recentAll;renderStats()">Show all</button></div>
+            <div class="meta" id="recent-count" style="margin-bottom:6px"></div>
             <div id="recent"></div>
           </div>
           <div class="panel">
@@ -310,7 +314,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
           <select id="fsrc" onchange="renderLeads()"><option value="">All sources</option></select>
           <select id="ftier" onchange="renderLeads()"><option value="">All tiers</option><option value="1">Single location</option><option value="2">Tier 2 (multi-door)</option></select>
           <select id="ft" onchange="renderLeads()"><option value="">All types</option></select>
-          <select id="fs" onchange="renderLeads()"><option value="">All stages</option><option>Not dropped</option><option>Planned</option><option>In sequence</option><option>Conversation</option><option>Converted</option><option>Passed</option></select>
+          <select id="fs" onchange="renderLeads()"><option value="">All stages</option><option>Not dropped</option><option>Planned</option><option>In sequence</option><option>Conversation</option><option>Converted</option><option>Passed</option><option value="__dropped">Dropped or shipped (has a date)</option><option value="__existing">Existing customers (no drop date)</option></select>
           <select id="fsort" onchange="renderLeads()"><option value="s">Strongest first</option><option value="w">Weakest first</option><option value="n">Name A to Z</option><option value="d">Latest drop first</option></select>
         </div>
         <div class="meta" id="leadcount" style="margin-bottom:8px"></div>
@@ -324,10 +328,11 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
       <div class="page-h">Out of state</div>
       <div class="page-sub">Call first, then offer a free fill</div>
       <div class="stats">
-        <div class="stat"><div class="sl">Out-of-state shops</div><div class="sv" id="oos-total"></div><div class="sh">Mostly from the Google Maps search</div></div>
-        <div class="stat"><div class="sl">Still to call</div><div class="sv" id="oos-queue"></div><div class="sh">Not reached yet</div></div>
+        <div class="stat tapstat" onclick="showOOS('')"><div class="sl">Out-of-state shops</div><div class="sv" id="oos-total"></div><div class="sh">Mostly from the Google Maps search</div></div>
+        <div class="stat tapstat" onclick="showOOS('To call')"><div class="sl">Still to call</div><div class="sv" id="oos-queue"></div><div class="sh">Stage: To call</div></div>
         <div class="stat"><div class="sl">Calls this week</div><div class="sv" id="oos-calls"></div><div class="sh">Logged below</div></div>
-        <div class="stat"><div class="sl">In conversation</div><div class="sv" id="oos-convo"></div><div class="sh">Spoke with them or emailed</div></div>
+        <div class="stat tapstat" onclick="showOOS('In sequence')"><div class="sl">In sequence</div><div class="sv" id="oos-seq"></div><div class="sh">Emailed or shipped, waiting</div></div>
+        <div class="stat tapstat" onclick="showOOS('Conversation')"><div class="sl">In conversation</div><div class="sv" id="oos-convo"></div><div class="sh">Stage: Conversation</div></div>
       </div>
       <details class="more" id="oos-statbox" style="background:var(--cream);border-radius:6px;padding:4px 14px;margin-bottom:10px"><summary>Out-of-state stats: by metro and call results</summary>
         <div id="oos-metro"></div>
@@ -616,7 +621,7 @@ async function saveCall(){const l=C.lead,err=$('c-err');if(!l){err.textContent='
  toast('Call logged for '+l.n+'.');C.lead=null;['c-name','c-to','c-email','c-note'].forEach(x=>$(x).value='');await loadAll()}
 const RLAB={spoke:'Spoke',transferred:'Spoke',got_email:'Got email',call_back:'Call back',voicemail:'Voicemail',no_answer:'No answer',not_interested:'Not interested'};
 function renderOOS(){const o=oos(),q=$('o-q').value.toLowerCase(),me=$('o-metro').value,st=$('o-stage').value;
- $('oos-total').textContent=o.length;$('oos-queue').textContent=o.filter(callable).length;$('oos-calls').textContent=callsThisWeek;$('oos-convo').textContent=o.filter(l=>['In sequence','Conversation'].includes(l.st)).length;
+ $('oos-total').textContent=o.length;$('oos-queue').textContent=o.filter(callable).length;$('oos-calls').textContent=callsThisWeek;$('oos-seq').textContent=o.filter(l=>l.st==='In sequence').length;$('oos-convo').textContent=o.filter(l=>l.st==='Conversation').length;
  const rows=o.filter(l=>(!q||(l.n+' '+l.w+' '+l.a+' '+l.ph).toLowerCase().includes(q))&&(!me||l.metro===me)&&(!st||(st==='To call'?callable(l):l.st===st)));const so=$('o-sort').value;rows.sort(so==='w'?(a,b)=>a.s-b.s:so==='n'?(a,b)=>a.n.localeCompare(b.n):(a,b)=>b.s-a.s);
  $('oos-count').textContent=rows.length+' of '+o.length+' shops'+(rows.length>oosLimit?' (showing '+oosLimit+')':'');$('oos-more').style.display=rows.length>oosLimit?'':'none';
  $('oosrows').innerHTML=rows.length?rows.slice(0,oosLimit).map(l=>{const i=L.indexOf(l);const s2=callable(l)?'To call':l.st;return `<tr><td class="hd"><b onclick="openLead(${i})" style="cursor:pointer">${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Multi</span>':''}</td><td><span class="score">${l.s}</span></td><td>${h(l.metro||l.w)}</td><td>${l.ph?`<a class="lnk" href="tel:${tel(l.ph)}">${h(l.ph)}</a>`:''}</td><td>${h(l.t)}</td><td><span class="badge ${s2==='To call'?'b-tan':SB[l.st]}">${h(s2)}</span></td><td>${h(l.nx)}</td><td class="acts"><button class="btn btn-red btn-sm" onclick="pickCall(${i})">Log call</button></td></tr>`}).join(''):'<tr><td class="hd" colspan="8">No shops match these filters.</td></tr>';
@@ -639,25 +644,33 @@ function oosMetroHtml(){const OO=L.filter(isOut),touched=l=>CALLED.has(l.id)||wo
  const bar=(n,d)=>{const r=d?Math.round(n/d*100):0;return d?`<b>${r}%</b>`:'<span class="meta">None yet</span>'};
  return rows.length?'<div class="tblk"><table><thead><tr><th>Metro</th><th>Reached</th><th>Converted</th><th>Rate</th><th>Called</th><th>Shops</th></tr></thead><tbody>'+rows.map(([k,v])=>`<tr><td class="hd"><b>${h(k)}</b></td><td>${v.r}</td><td>${v.c}</td><td>${bar(v.c,v.r)}</td><td>${v.t}</td><td>${v.n}</td></tr>`).join('')+'</tbody></table></div>':'<div class="meta">No out-of-state shops yet.</div>'}
 function oosResultsHtml(){const wk=new Date();wk.setDate(wk.getDate()-((wk.getDay()+6)%7));wk.setHours(0,0,0,0);
- const G=[['Spoke with them',['spoke','transferred','got_email']],['Got an email',['got_email']],['Voicemail',['voicemail']],['No answer',['no_answer']],['Call back later',['call_back']],['Not interested',['not_interested']]];
+ const G=[['Spoke, no email yet',['spoke','transferred']],['Spoke and got an email',['got_email']],['Voicemail',['voicemail']],['No answer',['no_answer']],['Call back later',['call_back']],['Not interested',['not_interested']]];
  const cnt=(set,w)=>CALLROWS.filter(c=>set.includes(c.result)&&(!w||new Date(c.called_at)>=wk)).length;
  return '<div class="tblk"><table><thead><tr><th>Result</th><th>This week</th><th>All time</th></tr></thead><tbody>'+G.map(([n,set])=>`<tr><td class="hd"><b>${n}</b></td><td>${cnt(set,1)}</td><td>${cnt(set,0)}</td></tr>`).join('')+`<tr><td class="hd"><b>Total calls</b></td><td>${CALLROWS.filter(c=>new Date(c.called_at)>=wk).length}</td><td>${CALLROWS.length}</td></tr></tbody></table></div>`}
+function showLeads(st){['q','freg','fsrc','ftier','ft'].forEach(i=>$(i).value='');$('fs').value=st;leadLimit=200;renderLeads();go('leads')}
+function showOOS(st){$('o-q').value='';$('o-metro').value='';$('o-stage').value=st;oosLimit=150;renderOOS();go('oos')}
 function renderStats(){const CO=L.filter(l=>!isOut(l)),OO=L.filter(isOut);
- const conv=CO.filter(l=>l.st==='Converted').length,w=CO.filter(worked).length;
- $('st-total').textContent=CO.length;$('st-worked').textContent=w;$('st-conv').textContent=conv;$('st-rate').textContent=(w?Math.round(conv/w*100):0)+'% of dropped or shipped';
- const bar=(n,d)=>{const r=d?Math.round(n/d*100):0;return d?`<span style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end"><span class="bar"><i style="width:${r}%"></i></span><b>${r}%</b></span>`:'<span class="meta">None yet</span>'};
- const ty={Hotel:{w:0,c:0,p:0},Coffee:{w:0,c:0,p:0},'Specialty retail':{w:0,c:0,p:0},Airport:{w:0,c:0,p:0},Other:{w:0,c:0,p:0}};CO.forEach(l=>{const k=cat(l);if(!k)return;const v=ty[k];if(worked(l))v.w++;else v.p++;if(l.st==='Converted')v.c++});
+ // A lead counts as dropped or shipped only when it has a drop or ship date. Converted counts only those.
+ const dropped=l=>!!l.dd,won=l=>l.st==='Converted'&&!!l.dd,existing=l=>l.st==='Converted'&&!l.dd;
+ const w=CO.filter(dropped).length,conv=CO.filter(won).length,ex=CO.filter(existing).length;
+ $('st-total').textContent=CO.length;$('st-worked').textContent=w;$('st-conv').textContent=conv;
+ $('st-rate').textContent=(w?Math.round(conv/w*100):0)+'% of dropped'+(ex?' · plus '+ex+' existing customers':'');
+ const pct=(n,d)=>{const r=d?Math.round(n/d*100):0;return d?`<span style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end"><span class="bar"><i style="width:${r}%"></i></span><b>${r}%</b></span>`:'<span class="meta">None yet</span>'};
+ const ty={Hotel:{w:0,c:0,p:0},Coffee:{w:0,c:0,p:0},'Specialty retail':{w:0,c:0,p:0},Airport:{w:0,c:0,p:0},Other:{w:0,c:0,p:0}};
+ CO.forEach(l=>{const k=cat(l);if(!k)return;const v=ty[k];if(dropped(l))v.w++;else if(!worked(l))v.p++;if(won(l))v.c++});
  const rate=v=>v.w?v.c/v.w:-1;
  const rows=Object.entries(ty).sort((a,b)=>(rate(b[1])-rate(a[1]))||(b[1].w-a[1].w));
- $('convsplit').innerHTML='<div class="tblk"><table><thead><tr><th>Type</th><th>Dropped or shipped</th><th>Converted</th><th>Rate</th><th>Not yet dropped</th></tr></thead><tbody>'+rows.map(([k,v])=>`<tr><td class="hd"><b>${k}</b></td><td>${v.w}</td><td>${v.c}</td><td>${bar(v.c,v.w)}</td><td>${v.p}</td></tr>`).join('')+'</tbody></table></div>';
+ $('convsplit').innerHTML='<div class="tblk"><table><thead><tr><th>Type</th><th>Dropped or shipped</th><th>Converted</th><th>Rate</th><th>Not yet dropped</th></tr></thead><tbody>'+rows.map(([k,v])=>`<tr><td class="hd"><b>${k}</b></td><td>${v.w}</td><td>${v.c}</td><td>${pct(v.c,v.w)}</td><td>${v.p}</td></tr>`).join('')+'</tbody></table></div>';
  const touched=l=>CALLED.has(l.id)||worked(l);
  const ow=OO.filter(worked).length,oc=OO.filter(l=>l.st==='Converted').length;
- $('os-total').textContent=OO.length;$('os-called').textContent=OO.filter(touched).length;$('os-conv').textContent=oc;$('os-rate').textContent=(ow?Math.round(oc/ow*100):0)+'% of shops reached';
+ $('os-total').textContent=OO.length;$('os-called').textContent=OO.filter(touched).length;$('os-conv').textContent=oc;$('os-rate').textContent=(ow?Math.round(oc/ow*100):0)+'% of '+ow+' reached';
  $('oossplit').innerHTML=oosMetroHtml();
- $('recent').innerHTML=L.filter(l=>l.dd).sort((a,b)=>b.dd.localeCompare(a.dd)).slice(0,recentAll?1000:5).map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Shipped':'Dropped'} ${fmt(l.dd)} · ${h(l.t)}</div></div><span class="badge ${SB[l.st]}">${l.st}</span></div>`).join('')||'<div class="meta">No drops logged yet.</div>';$('recent-btn').textContent=recentAll?'Show latest 5':'Show all';$('recent').style.cssText=recentAll?'max-height:460px;overflow:auto':'';
- $('convos').innerHTML=L.filter(l=>l.st==='Conversation').map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${h(l.nx)}</div></div><span class="badge b-ok">Conversation</span></div>`).join('')||'<div class="meta">None right now.</div>'}
+ const rec=L.filter(dropped).sort((a,b)=>b.dd.localeCompare(a.dd));
+ $('recent-count').textContent=rec.length+' total: '+rec.filter(l=>!isOut(l)).length+' Colorado, '+rec.filter(isOut).length+' out of state';
+ $('recent').innerHTML=rec.slice(0,recentAll?1000:5).map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Shipped':'Dropped'} ${fmt(l.dd)} · ${h(l.t)}</div></div><span class="badge ${SB[l.st]}">${l.st}</span></div>`).join('')||'<div class="meta">No drops logged yet.</div>';$('recent-btn').textContent=recentAll?'Show latest 5':'Show all';$('recent').style.cssText=recentAll?'max-height:460px;overflow:auto':'';
+ $('convos').innerHTML=L.filter(l=>l.st==='Conversation').map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Out of state':'Colorado'} · ${h(l.nx)}</div></div><span class="badge b-ok">Conversation</span></div>`).join('')||'<div class="meta">None right now.</div>'}
 function renderLeads(){const q=$('q').value.toLowerCase(),reg=$('freg').value,src=$('fsrc').value,tier=$('ftier').value,ft=$('ft').value,fs=$('fs').value;const CO=L.filter(l=>!isOut(l));
- const rows=CO.filter(l=>(!q||(l.n+' '+l.w+' '+l.a).toLowerCase().includes(q))&&(!reg||l.r===reg)&&(!src||l.src===src)&&(!tier||l.tier===+tier)&&(!ft||l.t===ft)&&(!fs||l.st===fs));const so=$('fsort').value;rows.sort(so==='w'?(a,b)=>a.s-b.s:so==='n'?(a,b)=>a.n.localeCompare(b.n):so==='d'?(a,b)=>(b.dd||'').localeCompare(a.dd||'')||b.s-a.s:(a,b)=>b.s-a.s);
+ const rows=CO.filter(l=>(!q||(l.n+' '+l.w+' '+l.a).toLowerCase().includes(q))&&(!reg||l.r===reg)&&(!src||l.src===src)&&(!tier||l.tier===+tier)&&(!ft||l.t===ft)&&(!fs||(fs==='__dropped'?!!l.dd:fs==='__existing'?(l.st==='Converted'&&!l.dd):l.st===fs)));const so=$('fsort').value;rows.sort(so==='w'?(a,b)=>a.s-b.s:so==='n'?(a,b)=>a.n.localeCompare(b.n):so==='d'?(a,b)=>(b.dd||'').localeCompare(a.dd||'')||b.s-a.s:(a,b)=>b.s-a.s);
  $('leadcount').textContent=rows.length+' of '+CO.length+' Colorado leads'+(rows.length>leadLimit?' (showing '+leadLimit+')':'');$('lead-more').style.display=rows.length>leadLimit?'':'none';
  $('leadrows').innerHTML=rows.length?rows.slice(0,leadLimit).map(l=>`<tr class="tap" onclick="openLead(${L.indexOf(l)})"><td class="hd"><b>${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Tier 2</span>':''}</td><td><span class="score">${l.s}</span></td><td>${h(l.t)}</td><td>${h(l.w)}</td><td>${h(l.z)}</td><td>${fmt(l.dd)}</td><td><span class="badge ${SB[l.st]}">${l.st}</span></td><td>${h(l.nx)}</td><td>${h(l.src)}</td></tr>`).join(''):'<tr><td class="hd" colspan="9">No leads match these filters.</td></tr>';lab()}
 async function upLead(i,up,msg){const l=L[i];const{error}=await sb.from('leads').update(up).eq('id',l.id);if(error)return fail(error,'Could not save');closeLead();toast(msg);await loadAll()}
