@@ -171,8 +171,8 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
 #cands{max-height:320px;overflow:auto;border:1px solid var(--tan);border-radius:4px;padding:0 8px}
 @media(max-width:760px){.filters,.filters.f4{grid-template-columns:1fr 1fr}.filters select{font-size:14px;padding:8px 22px 8px 8px;text-overflow:ellipsis}#cands{max-height:210px}#s-routes .grid2>.panel:first-child .fgrid{grid-template-columns:1fr 1fr}#s-routes .fgrid .fg:nth-child(3){grid-column:auto}.tblk th:nth-child(5),.tblk td:nth-child(5){display:table-cell}.tblk th,.tblk td{padding:5px 4px}}
 .tapstat{cursor:pointer}
-#s-oos .stats{grid-template-columns:repeat(5,minmax(0,1fr))}
-@media(max-width:760px){#s-oos .stats{grid-template-columns:1fr 1fr}#s-oos .stats .stat:first-child{grid-column:1/-1}}
+#s-oos .stats{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media(max-width:760px){#s-oos .stats{grid-template-columns:1fr 1fr 1fr}}
 </style>
 </head>
 <body>
@@ -228,9 +228,10 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
         <div class="note">A lead counts as dropped or shipped once it has a drop date, and as converted only if it was dropped first. Existing customers loaded without a drop date are shown separately. Distributors aren't counted in this table.</div>
       </div>
       <div class="lbl" style="color:var(--cream);margin:4px 0 6px">Out of state</div>
-      <div class="stats s3">
+      <div class="stats">
         <div class="stat tapstat" onclick="showOOS('')"><div class="sl">Total shops</div><div class="sv" id="os-total"></div><div class="sh">Out of state</div></div>
         <div class="stat"><div class="sl">Contacted</div><div class="sv" id="os-called"></div><div class="sh">Called, emailed or shipped</div></div>
+        <div class="stat tapstat" onclick="showOOS('__shipped')"><div class="sl">Shipped</div><div class="sv" id="os-shipped"></div><div class="sh">Have a ship date</div></div>
         <div class="stat tapstat" onclick="showOOS('Converted')"><div class="sl">Converted</div><div class="sv" id="os-conv"></div><div class="sh" id="os-rate"></div></div>
       </div>
       <div class="panel">
@@ -337,6 +338,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
         <div class="stat tapstat" onclick="showOOS('')"><div class="sl">Out-of-state shops</div><div class="sv" id="oos-total"></div><div class="sh">Mostly from the Google Maps search</div></div>
         <div class="stat tapstat" onclick="showOOS('To call')"><div class="sl">Still to call</div><div class="sv" id="oos-queue"></div><div class="sh">Stage: To call</div></div>
         <div class="stat"><div class="sl">Calls this week</div><div class="sv" id="oos-calls"></div><div class="sh">Logged below</div></div>
+        <div class="stat tapstat" onclick="showOOS('__shipped')"><div class="sl">Shipped</div><div class="sv" id="oos-shipped"></div><div class="sh">Have a ship date</div></div>
         <div class="stat tapstat" onclick="showOOS('In sequence')"><div class="sl">In sequence</div><div class="sv" id="oos-seq"></div><div class="sh">Emailed or shipped, waiting</div></div>
         <div class="stat tapstat" onclick="showOOS('Conversation')"><div class="sl">In conversation</div><div class="sv" id="oos-convo"></div><div class="sh">Stage: Conversation</div></div>
       </div>
@@ -381,7 +383,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
         <div class="filters f4">
           <input placeholder="Search shop, town or phone" id="o-q" oninput="renderOOS()">
           <select id="o-metro" onchange="renderOOS()"><option value="">All metros</option></select>
-          <select id="o-stage" onchange="renderOOS()"><option value="">All stages</option><option selected>To call</option><option>In sequence</option><option>Conversation</option><option>Converted</option><option>Passed</option></select>
+          <select id="o-stage" onchange="renderOOS()"><option value="">All stages</option><option selected>To call</option><option>In sequence</option><option>Conversation</option><option>Converted</option><option>Passed</option><option value="__shipped">Shipped (has a ship date)</option></select>
           <select id="o-sort" onchange="renderOOS()"><option value="s">Strongest first</option><option value="w">Weakest first</option><option value="n">Name A to Z</option></select>
         </div>
         <div class="meta" id="oos-count" style="margin-bottom:8px"></div>
@@ -631,8 +633,8 @@ async function saveCall(){const l=C.lead,err=$('c-err');if(!l){err.textContent='
  toast('Call logged for '+l.n+'.');C.lead=null;['c-name','c-to','c-email','c-note'].forEach(x=>$(x).value='');await loadAll()}
 const RLAB={spoke:'Spoke',transferred:'Spoke',got_email:'Got email',call_back:'Call back',voicemail:'Voicemail',no_answer:'No answer',not_interested:'Not interested'};
 function renderOOS(){const o=oos(),q=$('o-q').value.toLowerCase(),me=$('o-metro').value,st=$('o-stage').value;
- $('oos-total').textContent=o.length;$('oos-queue').textContent=o.filter(callable).length;$('oos-calls').textContent=callsThisWeek;$('oos-seq').textContent=o.filter(l=>l.st==='In sequence').length;$('oos-convo').textContent=o.filter(l=>l.st==='Conversation').length;
- const rows=o.filter(l=>(!q||(l.n+' '+l.w+' '+l.a+' '+l.ph).toLowerCase().includes(q))&&(!me||l.metro===me)&&(!st||(st==='To call'?callable(l):l.st===st)));const so=$('o-sort').value;rows.sort(so==='w'?(a,b)=>a.s-b.s:so==='n'?(a,b)=>a.n.localeCompare(b.n):(a,b)=>b.s-a.s);
+ $('oos-total').textContent=o.length;$('oos-queue').textContent=o.filter(callable).length;$('oos-calls').textContent=callsThisWeek;$('oos-shipped').textContent=o.filter(l=>l.dd).length;$('oos-seq').textContent=o.filter(l=>l.st==='In sequence').length;$('oos-convo').textContent=o.filter(l=>l.st==='Conversation').length;
+ const rows=o.filter(l=>(!q||(l.n+' '+l.w+' '+l.a+' '+l.ph).toLowerCase().includes(q))&&(!me||l.metro===me)&&(!st||(st==='To call'?callable(l):st==='__shipped'?!!l.dd:l.st===st)));const so=$('o-sort').value;rows.sort(so==='w'?(a,b)=>a.s-b.s:so==='n'?(a,b)=>a.n.localeCompare(b.n):(a,b)=>b.s-a.s);
  $('oos-count').textContent=rows.length+' of '+o.length+' shops'+(rows.length>oosLimit?' (showing '+oosLimit+')':'');$('oos-more').style.display=rows.length>oosLimit?'':'none';
  $('oosrows').innerHTML=rows.length?rows.slice(0,oosLimit).map(l=>{const i=L.indexOf(l);const s2=callable(l)?'To call':l.st;return `<tr><td class="hd"><b onclick="openLead(${i})" style="cursor:pointer">${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Multi</span>':''}</td><td><span class="score">${l.s}</span></td><td>${h(l.metro||l.w)}</td><td>${l.ph?`<a class="lnk" href="tel:${tel(l.ph)}">${h(l.ph)}</a>`:''}</td><td>${h(l.t)}</td><td><span class="badge ${s2==='To call'?'b-tan':SB[l.st]}">${h(s2)}</span></td><td>${h(l.nx)}</td><td class="acts"><button class="btn btn-red btn-sm" onclick="pickCall(${i})">Log call</button></td></tr>`}).join(''):'<tr><td class="hd" colspan="8">No shops match these filters.</td></tr>';
  $('calllog').innerHTML=CALLS.length?CALLS.map(c=>`<tr><td class="hd"><b>${h(c.leads?c.leads.name:'')}</b></td><td>${h(fmtWhen(c.called_at))}</td><td>${h(c.reached||'')}${c.contact_name?' ('+h(c.contact_name)+')':''}</td><td>${h(c.interest||RLAB[c.result]||c.result)}</td><td>${h(c.next_step||'')}</td><td>${h(c.summary||'')}</td></tr>`).join(''):'<tr><td class="hd" colspan="6">No calls logged yet.</td></tr>';
@@ -675,7 +677,7 @@ function renderStats(){const CO=L.filter(l=>!isOut(l)),OO=L.filter(isOut);
  $('convsplit').innerHTML='<div class="tblk"><table><thead><tr><th>Type</th><th>Dropped or shipped</th><th>Converted</th><th>Rate</th><th>Not yet dropped</th></tr></thead><tbody>'+rows.map(([k,v])=>`<tr><td class="hd"><b>${k}</b></td><td>${v.w}</td><td>${v.c}</td><td>${pct(v.c,v.w)}</td><td>${v.p}</td></tr>`).join('')+'</tbody></table></div>';
  const touched=l=>CALLED.has(l.id)||worked(l);
  const ow=OO.filter(worked).length,oc=OO.filter(l=>l.st==='Converted').length;
- $('os-total').textContent=OO.length;$('os-called').textContent=OO.filter(touched).length;$('os-conv').textContent=oc;$('os-rate').textContent=(ow?Math.round(oc/ow*100):0)+'% of '+ow+' reached';
+ $('os-total').textContent=OO.length;$('os-shipped').textContent=OO.filter(l=>l.dd).length;$('os-called').textContent=OO.filter(touched).length;$('os-conv').textContent=oc;$('os-rate').textContent=(ow?Math.round(oc/ow*100):0)+'% of '+ow+' reached';
  $('oossplit').innerHTML=oosMetroHtml();
  const rec=L.filter(dropped).sort((a,b)=>b.dd.localeCompare(a.dd));
  $('recent-count').textContent=rec.length+' total: '+rec.filter(l=>!isOut(l)).length+' Colorado, '+rec.filter(isOut).length+' out of state';
