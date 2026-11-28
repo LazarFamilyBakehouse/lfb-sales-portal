@@ -210,6 +210,12 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
     <section class="section active" id="s-home">
       <div class="page-h">Dashboard</div>
       <div class="page-sub" id="today"></div>
+      <div class="lbl" style="color:var(--cream);margin:0 0 6px">This week</div>
+      <div class="stats s3">
+        <div class="stat tapstat" onclick="showLeads('__week')"><div class="sl">Drops</div><div class="sv" id="wk-drops"></div><div class="sh" id="wk-drops-sub"></div></div>
+        <div class="stat tapstat" onclick="go('oos')"><div class="sl">Calls</div><div class="sv" id="wk-calls"></div><div class="sh">Logged since Monday</div></div>
+        <div class="stat"><div class="sl">Emails sent</div><div class="sv" id="wk-sent"></div><div class="sh">Through the portal</div></div>
+      </div>
       <div class="lbl" style="color:var(--cream);margin:0 0 6px">Colorado</div>
       <div class="stats s3">
         <div class="stat tapstat" onclick="showLeads('')"><div class="sl">Total leads</div><div class="sv" id="st-total"></div><div class="sh">Colorado</div></div>
@@ -314,7 +320,7 @@ details.more>summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--
           <select id="fsrc" onchange="renderLeads()"><option value="">All sources</option></select>
           <select id="ftier" onchange="renderLeads()"><option value="">All tiers</option><option value="1">Single location</option><option value="2">Tier 2 (multi-door)</option></select>
           <select id="ft" onchange="renderLeads()"><option value="">All types</option></select>
-          <select id="fs" onchange="renderLeads()"><option value="">All stages</option><option>Not dropped</option><option>Planned</option><option>In sequence</option><option>Conversation</option><option>Converted</option><option>Passed</option><option value="__dropped">Dropped or shipped (has a date)</option><option value="__existing">Existing customers (no drop date)</option></select>
+          <select id="fs" onchange="renderLeads()"><option value="">All stages</option><option>Not dropped</option><option>Planned</option><option>In sequence</option><option>Conversation</option><option>Converted</option><option>Passed</option><option value="__week">Dropped this week</option><option value="__dropped">Dropped or shipped (has a date)</option><option value="__existing">Existing customers (no drop date)</option></select>
           <select id="fsort" onchange="renderLeads()"><option value="s">Strongest first</option><option value="w">Weakest first</option><option value="n">Name A to Z</option><option value="d">Latest drop first</option></select>
         </div>
         <div class="meta" id="leadcount" style="margin-bottom:8px"></div>
@@ -471,7 +477,9 @@ async function enter(){$('login').style.display='none';$('app').style.display='f
 sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'){$('app').style.display='none';$('login').style.display='flex';setMode('new')}});
 
 /* ---------- DATA ---------- */
-let CALLED=new Set(),CALLROWS=[],recentAll=false;let L=[],Q=[],D=[],PEOPLE=[],CALLS=[],SETTINGS={},approvedCount=0,fillsThisWeek=0,callsThisWeek=0;
+let CALLED=new Set(),CALLROWS=[],recentAll=false,sentWeek=0;
+function weekStart(){const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));d.setHours(0,0,0,0);return d}
+function weekISO(){const d=weekStart();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}let L=[],Q=[],D=[],PEOPLE=[],CALLS=[],SETTINGS={},approvedCount=0,fillsThisWeek=0,callsThisWeek=0;
 async function fetchAll(build){let out=[];for(let i=0;;i+=1000){const{data,error}=await build().range(i,i+999);if(error)return{error};out=out.concat(data);if(data.length<1000)break}return{data:out}}
 const mapLead=r=>({id:r.id,s:r.score,n:r.name,t:r.type,tier:r.tier,w:r.area||'',r:r.region||'',z:r.size_note||'',a:r.address||'',src:r.source||'',st:r.stage,nx:r.next_action||'',dd:r.first_touch||'',sw:r.spoke_with||'',cv:r.converted_on||'',inv:r.first_invoice||'',trk:r.track,notes:r.notes||'',ph:r.phone||'',metro:r.metro||''});
 async function loadAll(){
@@ -489,6 +497,7 @@ async function loadAll(){
  const bad=[a,b,c,d,e,k].find(x=>x.error);if(bad){fail(bad.error,'Could not load');return}
  L=a.data.map(mapLead);Q=b.data;D=c.data;PEOPLE=d.data;SETTINGS=Object.fromEntries(e.data.map(x=>[x.key,x.value]));approvedCount=f.count||0;fillsThisWeek=g.count||0;CALLS=k.data;callsThisWeek=m.count||0;
  const cl=await fetchAll(()=>sb.from('calls').select('lead_id,result,called_at').order('id'));CALLROWS=cl.data||[];CALLED=new Set(CALLROWS.map(x=>x.lead_id));
+ try{const sw=await sb.from('emails').select('id',{count:'exact',head:true}).eq('status','sent').gte('sent_at',weekStart().toISOString());sentWeek=sw.count||0}catch(e){}
  $('today').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
  const cur=$('ft').value;$('ft').innerHTML='<option value="">All types</option>'+[...new Set(L.filter(l=>!isOut(l)).map(l=>l.t))].sort().map(t=>'<option>'+h(t)+'</option>').join('');$('ft').value=cur;
  const fill=(id,first,vals)=>{const v=$(id).value;$(id).innerHTML='<option value="">'+first+'</option>'+vals.map(x=>'<option>'+h(x)+'</option>').join('');$(id).value=vals.includes(v)?v:''};
@@ -654,6 +663,8 @@ function renderStats(){const CO=L.filter(l=>!isOut(l)),OO=L.filter(isOut);
  // A lead counts as dropped or shipped only when it has a drop or ship date. Converted counts only those.
  const dropped=l=>!!l.dd,won=l=>l.st==='Converted'&&!!l.dd,existing=l=>l.st==='Converted'&&!l.dd;
  const w=CO.filter(dropped).length,conv=CO.filter(won).length,ex=CO.filter(existing).length;
+ const wi=weekISO(),wd=CO.filter(l=>l.dd&&l.dd>=wi).length,ws=OO.filter(l=>l.dd&&l.dd>=wi).length;
+ $('wk-drops').textContent=wd;$('wk-drops-sub').textContent=ws?'Plus '+ws+' shipped out of state':'Colorado, since Monday';$('wk-calls').textContent=CALLROWS.filter(c=>new Date(c.called_at)>=weekStart()).length;$('wk-sent').textContent=sentWeek;
  $('st-total').textContent=CO.length;$('st-worked').textContent=w;$('st-conv').textContent=conv;
  $('st-rate').textContent=(w?Math.round(conv/w*100):0)+'% of dropped'+(ex?' · plus '+ex+' existing customers':'');
  const pct=(n,d)=>{const r=d?Math.round(n/d*100):0;return d?`<span style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end"><span class="bar"><i style="width:${r}%"></i></span><b>${r}%</b></span>`:'<span class="meta">None yet</span>'};
@@ -671,13 +682,20 @@ function renderStats(){const CO=L.filter(l=>!isOut(l)),OO=L.filter(isOut);
  $('recent').innerHTML=rec.slice(0,recentAll?1000:5).map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Shipped':'Dropped'} ${fmt(l.dd)} · ${h(l.t)}</div></div><span class="badge ${SB[l.st]}">${l.st}</span></div>`).join('')||'<div class="meta">No drops logged yet.</div>';$('recent-btn').textContent=recentAll?'Show latest 5':'Show all';$('recent').style.cssText=recentAll?'max-height:460px;overflow:auto':'';
  $('convos').innerHTML=L.filter(l=>l.st==='Conversation').map(l=>`<div class="row" onclick="openLead(${L.indexOf(l)})" style="cursor:pointer"><div class="main"><h4>${h(l.n)}</h4><div class="meta">${isOut(l)?'Out of state':'Colorado'} · ${h(l.nx)}</div></div><span class="badge b-ok">Conversation</span></div>`).join('')||'<div class="meta">None right now.</div>'}
 function renderLeads(){const q=$('q').value.toLowerCase(),reg=$('freg').value,src=$('fsrc').value,tier=$('ftier').value,ft=$('ft').value,fs=$('fs').value;const CO=L.filter(l=>!isOut(l));
- const rows=CO.filter(l=>(!q||(l.n+' '+l.w+' '+l.a).toLowerCase().includes(q))&&(!reg||l.r===reg)&&(!src||l.src===src)&&(!tier||l.tier===+tier)&&(!ft||l.t===ft)&&(!fs||(fs==='__dropped'?!!l.dd:fs==='__existing'?(l.st==='Converted'&&!l.dd):l.st===fs)));const so=$('fsort').value;rows.sort(so==='w'?(a,b)=>a.s-b.s:so==='n'?(a,b)=>a.n.localeCompare(b.n):so==='d'?(a,b)=>(b.dd||'').localeCompare(a.dd||'')||b.s-a.s:(a,b)=>b.s-a.s);
+ const rows=CO.filter(l=>(!q||(l.n+' '+l.w+' '+l.a).toLowerCase().includes(q))&&(!reg||l.r===reg)&&(!src||l.src===src)&&(!tier||l.tier===+tier)&&(!ft||l.t===ft)&&(!fs||(fs==='__week'?(!!l.dd&&l.dd>=weekISO()):fs==='__dropped'?!!l.dd:fs==='__existing'?(l.st==='Converted'&&!l.dd):l.st===fs)));const so=$('fsort').value;rows.sort(so==='w'?(a,b)=>a.s-b.s:so==='n'?(a,b)=>a.n.localeCompare(b.n):so==='d'?(a,b)=>(b.dd||'').localeCompare(a.dd||'')||b.s-a.s:(a,b)=>b.s-a.s);
  $('leadcount').textContent=rows.length+' of '+CO.length+' Colorado leads'+(rows.length>leadLimit?' (showing '+leadLimit+')':'');$('lead-more').style.display=rows.length>leadLimit?'':'none';
- $('leadrows').innerHTML=rows.length?rows.slice(0,leadLimit).map(l=>`<tr class="tap" onclick="openLead(${L.indexOf(l)})"><td class="hd"><b>${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Tier 2</span>':''}</td><td><span class="score">${l.s}</span></td><td>${h(l.t)}</td><td>${h(l.w)}</td><td>${h(l.z)}</td><td>${fmt(l.dd)}</td><td><span class="badge ${SB[l.st]}">${l.st}</span></td><td>${h(l.nx)}</td><td>${h(l.src)}</td></tr>`).join(''):'<tr><td class="hd" colspan="9">No leads match these filters.</td></tr>';lab()}
+ $('leadrows').innerHTML=rows.length?rows.slice(0,leadLimit).map(l=>`<tr class="tap" onclick="openLead(${L.indexOf(l)})"><td class="hd"><b>${h(l.n)}</b>${l.tier===2?' <span class="badge b-tan">Tier 2</span>':''}</td><td><span class="score">${l.s}</span></td><td>${h(l.t)}</td><td>${h(l.w)}</td><td>${h(l.z)}</td><td>${fmt(l.dd)}</td><td><span class="badge ${SB[l.st]}">${l.st}</span></td><td>${h(l.nx)}${worked(l)||l.dd?'':` <button class="btn btn-out2 btn-sm" onclick="event.stopPropagation();quick(${L.indexOf(l)},'dropped')">Dropped today</button>`}</td><td>${h(l.src)}</td></tr>`).join(''):'<tr><td class="hd" colspan="9">No leads match these filters.</td></tr>';lab()}
 async function upLead(i,up,msg){const l=L[i];const{error}=await sb.from('leads').update(up).eq('id',l.id);if(error)return fail(error,'Could not save');closeLead();toast(msg);await loadAll()}
 function convert(i){const inv=(prompt('First invoice number or amount (optional):')||'').trim();upLead(i,{stage:'Converted',converted_on:today(),first_invoice:inv,next_action:'Reorder nudge'},L[i].n+' marked converted.')}
 function unconvert(i){upLead(i,{stage:'In sequence',converted_on:null,next_action:'Resume follow-ups'},L[i].n+' moved back to active.')}
-function saveLead(i){upLead(i,{stage:$('m-stage').value,next_action:$('m-next').value.trim(),score:Math.max(0,Math.min(100,Math.round(+$('m-score').value||0))),address:$('m-addr').value.trim(),notes:$('m-notes').value.trim()},'Saved.')}
+function quick(i,k){const l=L[i],open=['Not dropped','Planned'].includes(l.st);
+ if(k==='dropped')return upLead(i,{first_touch:l.dd||today(),stage:open?'In sequence':l.st,next_action:open?(isOut(l)?'Shipped. Follow up':'Dropped. Send intro email'):l.nx},l.n+(isOut(l)?' marked shipped today.':' marked dropped today.'));
+ if(k==='passed')return upLead(i,{stage:'Passed',next_action:'Passed'},l.n+' marked passed.');
+ if(k==='reset'){if(!confirm('Set '+l.n+' back to not dropped and clear its date?'))return;return upLead(i,{stage:'Not dropped',first_touch:null,next_action:isOut(l)?'Call':'Plan drop'},l.n+' reset.')}}
+async function quickCall(i,res){const l=L[i];const cb=new Date();cb.setDate(cb.getDate()+2);cb.setHours(10,0,0,0);const cbTxt=(cb.getMonth()+1)+'/'+cb.getDate();const lab={no_answer:'No answer',voicemail:'Voicemail',spoke:'Spoke with them'}[res];
+ const r=await sb.from('calls').insert({lead_id:l.id,result:res,reached:res==='spoke'?'Staff':lab,next_step:res==='spoke'?'Follow up on the call':'Call back '+cbTxt,summary:'Quick log',callback_at:res==='spoke'?null:cb.toISOString()});if(r.error)return fail(r.error,'Could not log the call');
+ upLead(i,res==='spoke'?{stage:['Not dropped','Planned'].includes(l.st)?'Conversation':l.st,next_action:'Follow up on the call',first_touch:l.dd||today()}:{next_action:(res==='voicemail'?'Left voicemail. ':'No answer. ')+'Call back '+cbTxt},'Call logged for '+l.n+'.')}
+function saveLead(i){upLead(i,{first_touch:$('m-date').value||null,stage:$('m-stage').value,next_action:$('m-next').value.trim(),score:Math.max(0,Math.min(100,Math.round(+$('m-score').value||0))),address:$('m-addr').value.trim(),notes:$('m-notes').value.trim()},'Saved.')}
 function openLead(i){const l=L[i],c=l.st==='Converted';const ppl=PEOPLE.filter(p=>p.lead_id===l.id);
  $('lead').innerHTML=`<button class="x" onclick="closeLead()" aria-label="Close">&times;</button>
  <div class="serif" style="font-size:1.35rem;font-weight:700">${h(l.n)}</div>
@@ -685,9 +703,12 @@ function openLead(i){const l=L[i],c=l.st==='Converted';const ppl=PEOPLE.filter(p
  <div class="kv"><b>Type</b>${h(l.t)}<br><b>Size</b>${h(l.z)}<br><b>Address</b>${l.a?`<a class="lnk" target="_blank" rel="noopener" href="${mapLink(l.n+' '+mapQ(l))}">${h(l.a)}</a>`:''}<br><b>Area</b>${h(l.w)}${l.metro?' · '+h(l.metro):''}${l.ph?`<br><b>Phone</b><a class="lnk" href="tel:${tel(l.ph)}">${h(l.ph)}</a>`:''}<br><b>Loaded from</b>${h(l.src)}
  ${l.dd?`<br><b>${isOut(l)?'Shipped':'Dropped'}</b>${fmt(l.dd)}`:''}${l.sw?`<br><b>Spoke with</b>${h(l.sw)}`:''}${ppl.length?`<br><b>People</b>${ppl.map(p=>h(p.name)+(p.email?' &lt;'+h(p.email)+'&gt;':'')+(p.phone?' '+h(p.phone):'')).join('; ')}`:''}${c?`<br><b>Converted</b>${fmt(l.cv)}${l.inv?' · '+h(l.inv):''}`:''}</div>
  <div class="fgrid" style="margin-top:12px"><div class="fg"><label>Stage</label><select id="m-stage">${STAGES.map(s=>`<option${s===l.st?' selected':''}>${s}</option>`).join('')}</select></div><div class="fg"><label>Score</label><input id="m-score" type="number" min="0" max="100" value="${l.s}"></div></div>
+ <div class="fg"><label>${isOut(l)?'Ship date':'Drop date'}</label><input id="m-date" type="date" value="${h(l.dd)}"></div>
  <div class="fg"><label>Next</label><input id="m-next" value="${h(l.nx)}"></div>
  <div class="fg"><label>Address</label><input id="m-addr" value="${h(l.a)}"></div>
  <div class="fg"><label>Notes</label><input id="m-notes" value="${h(l.notes)}"></div>
+ <div class="lbl" style="margin:10px 0 6px">Quick update</div>
+ <div style="display:flex;gap:6px;flex-wrap:wrap">${l.dd?'':`<button class="btn btn-red btn-sm" onclick="quick(${i},'dropped')">${isOut(l)?'Shipped today':'Dropped today'}</button>`}${isOut(l)?`<button class="btn btn-out2 btn-sm" onclick="quickCall(${i},'no_answer')">Called, no answer</button><button class="btn btn-out2 btn-sm" onclick="quickCall(${i},'voicemail')">Left voicemail</button><button class="btn btn-out2 btn-sm" onclick="quickCall(${i},'spoke')">Spoke with them</button>`:''}${l.st==='Passed'?'':`<button class="btn btn-out2 btn-sm" onclick="quick(${i},'passed')">Passed</button>`}${worked(l)||l.dd?`<button class="btn btn-out2 btn-sm" onclick="quick(${i},'reset')">Undo: not dropped</button>`:''}</div>
  <div class="btnrow" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn btn-dark" onclick="saveLead(${i})">Save</button>${c?`<button class="btn btn-out2" onclick="unconvert(${i})">Undo converted</button>`:`<button class="btn btn-red" onclick="convert(${i})">Mark converted</button>${isOut(l)?`<button class="btn btn-out2" onclick="closeLead();pickCall(${i})">Log a call</button>`:`<button class="btn btn-out2" onclick="startDrop(${i})">Log a drop here</button>`}`}</div>`;
  $('ov').classList.add('open')}
 function closeLead(){$('ov').classList.remove('open')}
